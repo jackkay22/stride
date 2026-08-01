@@ -1,20 +1,21 @@
+
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import cron from 'node-cron';
 import { createClient } from '@supabase/supabase-js';
-
+ 
 dotenv.config();
-
+ 
 const app = express();
 app.use(cors());
 app.use(express.json());
-
+ 
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
-
+ 
 const PORT = process.env.PORT || 3000;
 const BASE_URL = process.env.BASE_URL || `http://localhost:${PORT}`;
-
+ 
 /* ============================================================
    SESSIONS LOG — hit/niggle/miss per planned session
    ============================================================ */
@@ -23,13 +24,13 @@ app.get('/api/sessions', async (req, res) => {
   if (error) return res.status(500).json({ error: error.message });
   res.json(data);
 });
-
+ 
 app.post('/api/sessions', async (req, res) => {
   const { week, day, status } = req.body;
   if (!week || !day || !status) return res.status(400).json({ error: 'week, day, status are required' });
   const { data, error } = await supabase.from('sessions_log').insert({ week, day, status }).select().single();
   if (error) return res.status(500).json({ error: error.message });
-
+ 
   // simple adaptive rule engine — mirrors the logic from the standalone prototype
   let adaptMsg = null;
   if (status === 'miss') {
@@ -40,10 +41,10 @@ app.post('/api/sessions', async (req, res) => {
     adaptMsg = `Niggle flagged Week ${week} ${day} — next quality session swapped for easy, strength pushed back 48h.`;
   }
   if (adaptMsg) await supabase.from('adapt_log').insert({ message: adaptMsg });
-
+ 
   res.json({ session: data, adaptation: adaptMsg });
 });
-
+ 
 /* ============================================================
    ADAPT LOG
    ============================================================ */
@@ -52,7 +53,7 @@ app.get('/api/adapt-log', async (req, res) => {
   if (error) return res.status(500).json({ error: error.message });
   res.json(data);
 });
-
+ 
 /* ============================================================
    VO2 MAX / VDOT
    ============================================================ */
@@ -63,13 +64,13 @@ function estimateVO2(distanceKm, seconds) {
   const pctMax = 0.8 + 0.1894393 * Math.exp(-0.012778 * minutes) + 0.2989558 * Math.exp(-0.1932605 * minutes);
   return vo2 / pctMax;
 }
-
+ 
 app.get('/api/vo2', async (req, res) => {
   const { data, error } = await supabase.from('vo2_history').select('*').order('entry_date', { ascending: true });
   if (error) return res.status(500).json({ error: error.message });
   res.json(data);
 });
-
+ 
 app.post('/api/vo2', async (req, res) => {
   const { entry_date, distance_km, time_seconds } = req.body;
   if (!distance_km || !time_seconds) return res.status(400).json({ error: 'distance_km and time_seconds required' });
@@ -82,7 +83,7 @@ app.post('/api/vo2', async (req, res) => {
   if (error) return res.status(500).json({ error: error.message });
   res.json(data);
 });
-
+ 
 /* ============================================================
    WHOOP — manual entry + OAuth + sync
    ============================================================ */
@@ -96,19 +97,19 @@ app.post('/api/whoop/manual', async (req, res) => {
   if (error) return res.status(500).json({ error: error.message });
   res.json(data);
 });
-
+ 
 app.get('/api/whoop', async (req, res) => {
   const { data, error } = await supabase.from('whoop_recovery').select('*').order('entry_date', { ascending: false }).limit(60);
   if (error) return res.status(500).json({ error: error.message });
   res.json(data);
 });
-
+ 
 // Step 1: send Jack here to approve access
 app.get('/auth/whoop', (req, res) => {
   const url = `https://api.prod.whoop.com/oauth/oauth2/auth?response_type=code&client_id=${process.env.WHOOP_CLIENT_ID}&redirect_uri=${encodeURIComponent(BASE_URL + '/auth/whoop/callback')}&scope=read:recovery read:cycles read:sleep offline`;
   res.redirect(url);
 });
-
+ 
 // Step 2: Whoop redirects back here with a code — exchange it for tokens
 app.get('/auth/whoop/callback', async (req, res) => {
   const { code } = req.query;
@@ -136,7 +137,7 @@ app.get('/auth/whoop/callback', async (req, res) => {
     res.status(500).send('Whoop auth failed: ' + err.message);
   }
 });
-
+ 
 async function syncWhoop() {
   const { data: integ } = await supabase.from('integrations').select('*').eq('provider', 'whoop').single();
   if (!integ) return;
@@ -157,7 +158,7 @@ async function syncWhoop() {
     );
   }
 }
-
+ 
 /* ============================================================
    STRAVA — manual entry + OAuth + sync
    ============================================================ */
@@ -171,18 +172,18 @@ app.post('/api/strava/manual', async (req, res) => {
   if (error) return res.status(500).json({ error: error.message });
   res.json(data);
 });
-
+ 
 app.get('/api/strava', async (req, res) => {
   const { data, error } = await supabase.from('strava_activities').select('*').order('activity_date', { ascending: false }).limit(60);
   if (error) return res.status(500).json({ error: error.message });
   res.json(data);
 });
-
+ 
 app.get('/auth/strava', (req, res) => {
   const url = `https://www.strava.com/oauth/authorize?client_id=${process.env.STRAVA_CLIENT_ID}&response_type=code&redirect_uri=${encodeURIComponent(BASE_URL + '/auth/strava/callback')}&approval_prompt=auto&scope=activity:read_all`;
   res.redirect(url);
 });
-
+ 
 app.get('/auth/strava/callback', async (req, res) => {
   const { code } = req.query;
   try {
@@ -208,7 +209,7 @@ app.get('/auth/strava/callback', async (req, res) => {
     res.status(500).send('Strava auth failed: ' + err.message);
   }
 });
-
+ 
 async function refreshStravaTokenIfNeeded(integ) {
   if (new Date(integ.expires_at) > new Date()) return integ.access_token;
   const res = await fetch('https://www.strava.com/oauth/token', {
@@ -230,7 +231,7 @@ async function refreshStravaTokenIfNeeded(integ) {
   });
   return tokens.access_token;
 }
-
+ 
 async function syncStrava() {
   const { data: integ } = await supabase.from('integrations').select('*').eq('provider', 'strava').single();
   if (!integ) return;
@@ -257,23 +258,23 @@ async function syncStrava() {
     );
   }
 }
-
+ 
 /* ============================================================
    MANUAL SYNC TRIGGERS + SCHEDULED SYNC
    ============================================================ */
-app.post('/api/sync/strava', async (req, res) => {
-  try { await syncStrava(); res.json({ ok: true }); } catch (err) { res.status(500).json({ error: err.message }); }
+app.all('/api/sync/strava', async (req, res) => {
+  try { await syncStrava(); res.json({ ok: true, message: 'Strava sync ran — check your Supabase strava_activities table.' }); } catch (err) { res.status(500).json({ error: err.message }); }
 });
-app.post('/api/sync/whoop', async (req, res) => {
-  try { await syncWhoop(); res.json({ ok: true }); } catch (err) { res.status(500).json({ error: err.message }); }
+app.all('/api/sync/whoop', async (req, res) => {
+  try { await syncWhoop(); res.json({ ok: true, message: 'Whoop sync ran — check your Supabase whoop_recovery table.' }); } catch (err) { res.status(500).json({ error: err.message }); }
 });
-
+ 
 // Auto-sync both every 3 hours
 cron.schedule('0 */3 * * *', async () => {
   await syncStrava().catch(() => {});
   await syncWhoop().catch(() => {});
 });
-
+ 
 app.get('/', (req, res) => res.send('Splits backend is running.'));
-
+ 
 app.listen(PORT, () => console.log(`Splits backend listening on ${PORT}`));
