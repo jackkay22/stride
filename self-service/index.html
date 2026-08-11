@@ -97,7 +97,10 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="./config.js"></script>
+<!-- Cache-busted the same way passcode.js is — GitHub Pages caches plain files
+     for ~10 minutes, so without this, editing config.js wouldn't take effect
+     on a device that loaded the page in that window. -->
+<script>document.write('<scr' + 'ipt src="./config.js?v=' + Date.now() + '"></scr' + 'ipt>');</script>
 <script src="./app.js"></script>
 <script>
 const DAY_LABEL = { Mon: 'Mon', Tue: 'Tue', Wed: 'Wed', Thu: 'Thu', Fri: 'Fri', Sat: 'Sat', Sun: 'Sun' };
