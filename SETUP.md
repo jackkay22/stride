@@ -145,6 +145,47 @@ You can also see the raw record in Supabase → Table Editor → `change_log`.
 
 ---
 
+## Setting a passcode
+
+Without this, the app is currently locked for everyone, including you — it fails locked
+rather than open. Takes about 2 minutes, no GitHub experience needed beyond copy and paste.
+
+**Important: I (Claude) never see your passcode.** The tool below turns it into a
+scrambled fingerprint entirely inside your own browser — that's the only thing that ever
+leaves the page.
+
+1. Open <https://jackkay22.github.io/stride/passcode-tool.html>
+2. Type a passcode of your choosing, click **Generate**
+3. Click **Copy** — it copies one line of text, something like
+   `window.STRIDE_PASSCODE_HASH = "a1b2c3...";`
+4. Go to <https://github.com/jackkay22/stride/blob/main/passcode.js>
+5. Click the pencil (✏️) icon, top right of the file, to edit it
+6. Select everything in the box and paste over it with what you copied
+7. Scroll down, click **Commit changes**
+
+A minute or two later the site rebuilds and your passcode is live. To change it later,
+just repeat these steps with a new passcode.
+
+**How it behaves:**
+
+- Opened in a normal browser (Safari, Chrome, etc.), the app asks for the passcode once.
+  After that it's remembered on that device and won't ask again there.
+- Once added to your phone's home screen (see below), it never asks at all — installing
+  it is treated as proof it's your own device.
+- If you ever forget the passcode, there's no recovery flow — just generate a new one and
+  repeat the steps above. Anyone already unlocked on their own device stays unlocked; this
+  only affects devices that haven't entered it yet.
+
+This is a light gate, not real security — worth understanding what it does and doesn't do.
+It stops someone stumbling onto your GitHub Pages link from seeing your training data at a
+glance. It would not stop someone who deliberately opened your browser's developer tools.
+The passcode is never stored anywhere retrievable — not on GitHub, not by Claude — only its
+scrambled fingerprint is, in `passcode.js`, which is fine to be public since it can't be
+reversed back into the real passcode. `passcode-tool.html` isn't linked from the app itself;
+you only need it when setting or changing your passcode, so there's no need to bookmark it.
+
+---
+
 ## Installing Stride on your phone
 
 The app can now be added to a home screen and opens full-screen, with its own icon —

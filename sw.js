@@ -3,7 +3,7 @@
    comes fresh from the backend, so nothing here can show stale sessions or statuses.
 
    Bump CACHE when the shell changes so old copies get cleared out. */
-const CACHE = 'stride-shell-v1';
+const CACHE = 'stride-shell-v2';
 
 const SHELL = [
   './',
@@ -13,6 +13,11 @@ const SHELL = [
   './icons/icon-512.png',
   './icons/apple-touch-icon.png'
 ];
+// Absolute pathnames, so a fetch's url.pathname can be checked against it directly.
+// Deliberately excludes passcode.js: caching it would mean a changed passcode
+// doesn't take effect until a second reload. Anything not in this list is left
+// for the browser to fetch normally — not cached, not intercepted.
+const SHELL_PATHS = new Set(SHELL.map((u) => new URL(u, self.location).pathname));
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
@@ -55,7 +60,11 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Icons and other static bits: serve from cache, refresh in the background.
+  // Anything outside the known shell (passcode.js, passcode-tool.html, anything
+  // added later) — don't intercept, let the browser fetch it fresh every time.
+  if (!SHELL_PATHS.has(url.pathname)) return;
+
+  // Shell icons and similar: serve from cache, refresh in the background.
   event.respondWith(
     caches.match(req).then((cached) => {
       const network = fetch(req)

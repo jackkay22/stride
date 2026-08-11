@@ -51,8 +51,10 @@ add `STRIDE_API_KEY` to Render, then add the connector in Claude's settings.
 | --- | --- |
 | `index.html` | The app. Static, on GitHub Pages. Reads the plan from the backend, falls back to its own built-in copy if the backend is asleep. |
 | `manifest.webmanifest` | Makes the app installable to a home screen (name, icon, full-screen). |
-| `sw.js` | Service worker. Caches the app shell only — never the API, so the plan can't go stale. |
+| `sw.js` | Service worker. Caches the app shell only — never the API or `passcode.js`, so the plan can't go stale and a passcode change always takes effect immediately. |
 | `icons/` | App icons, generated from the runner mark. |
+| `passcode.js` | Holds a SHA-256 fingerprint of the access passcode — never the passcode itself. Edit directly on GitHub to set or change it; see SETUP.md. |
+| `passcode-tool.html` | Standalone page that turns a passcode into that fingerprint, entirely client-side. Not linked from the app. |
 | `server.js` | Express app: Strava/Whoop sync, VO2, session log, and the plan endpoints. |
 | `plan-service.js` | The plan read/write logic and the safety checks. One implementation, used by both the HTTP endpoints and the MCP tools. |
 | `mcp-server.js` | Wraps that as MCP tools so Claude can call them mid-conversation. Mounted at `/mcp` on the same service. |

@@ -17,6 +17,9 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Petrona:ital,wght@0,400;0,500;0,600;0,700;1,500&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<!-- Holds only a scrambled fingerprint of the access passcode, never the passcode itself.
+     See passcode-tool.html to set or change it. -->
+<script src="./passcode.js"></script>
 <style>
   /* Design tokens taken from the "Stride Weekly Premium" handoff. Status colours are
      deliberately desaturated — don't brighten them. */
@@ -79,6 +82,7 @@
   .countdown-label{color:var(--blue); font-size:12px; text-transform:uppercase; letter-spacing:0.14em; margin-bottom:10px; font-weight:700;}
   .countdown{font-family:var(--serif); font-weight:600; font-size:60px; line-height:0.95; color:var(--heading); display:flex; align-items:baseline; gap:12px; letter-spacing:-0.01em;}
   .countdown span.unit{font-family:var(--sans); font-size:14px; color:var(--muted); font-weight:500; text-transform:none; letter-spacing:0;}
+  .countdown-date{margin-top:6px; color:var(--muted-2); font-size:13px;}
   .race-meta{margin-top:16px; color:var(--muted); font-size:13.5px; line-height:1.7;}
   .race-meta b{color:#cdd5e3; font-weight:600;}
   .hero-mid, .hero-right{border-left:1px solid var(--line); padding-left:26px;}
@@ -159,6 +163,19 @@
   .btn.primary:hover{filter:brightness(1.08);}
   .btn:disabled{opacity:0.5; pointer-events:none;}
 
+  /* ---- access gate: blocks the app until the passcode is entered ---- */
+  #accessGate{position:fixed; inset:0; z-index:200; display:none; align-items:center; justify-content:center; padding:20px;
+    background:#0a0f1a; background-image:radial-gradient(120% 140% at 15% 0%, var(--bg-2) 0%, var(--bg-1) 45%, var(--bg-0) 100%);}
+  #accessGate.open{display:flex;}
+  .gate-card{max-width:360px; width:100%; background:var(--panel); backdrop-filter:blur(14px); border:1px solid var(--line);
+    border-radius:var(--r-card); padding:32px 28px; box-shadow:var(--shadow); text-align:center;}
+  .gate-card .logo-mark{width:44px; height:44px; margin:0 auto 18px;}
+  .gate-card h2{font-family:var(--serif); font-weight:600; font-size:22px; color:var(--heading); margin:0 0 6px;}
+  .gate-card p{color:var(--muted); font-size:13px; margin:0 0 20px; line-height:1.6;}
+  .gate-card input{width:100%; box-sizing:border-box; background:rgba(0,0,0,0.25); border:1px solid var(--line-2); color:var(--text);
+    padding:12px 14px; border-radius:var(--r-sm); font-size:15px; text-align:center; letter-spacing:0.06em; margin-bottom:12px;}
+  .gate-card input:focus{outline:none; border-color:rgba(111,159,242,0.5); box-shadow:0 0 0 3px rgba(111,159,242,0.12);}
+  .gate-card .err{color:var(--miss-text); font-size:12.5px; min-height:18px; margin-bottom:6px;}
   .modal-backdrop{position:fixed; inset:0; background:rgba(4,8,16,0.72); backdrop-filter:blur(4px); display:none; align-items:center; justify-content:center; z-index:50; padding:20px;}
   .modal-backdrop.open{display:flex;}
   .modal{background:#0e1626; border:1px solid var(--line-2); border-radius:var(--r-card); max-width:520px; width:100%; padding:26px; max-height:85vh; overflow-y:auto; box-shadow:0 24px 60px rgba(0,0,0,0.55);}
@@ -228,6 +245,34 @@
 </style>
 </head>
 <body>
+
+<!-- Access gate: blocks the app in a normal browser tab until the passcode is
+     entered. Never shown once installed to a home screen, and not shown again
+     in the browser after the first correct entry (remembered on this device).
+     See passcode.js / passcode-tool.html. -->
+<div id="accessGate">
+  <div class="gate-card">
+    <div class="logo-mark" style="margin-left:auto;margin-right:auto;">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <circle cx="16.5" cy="4.5" r="2.1" fill="#6f9ff2"></circle>
+        <path d="M9 21 L12.5 15 L10 12 L13 8 L16 11.5 L15 15 L18.5 13" stroke="#6f9ff2" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" fill="none"></path>
+        <path d="M6.5 15.5 L10 12" stroke="#6f9ff2" stroke-width="2.1" stroke-linecap="round" fill="none"></path>
+      </svg>
+    </div>
+    <div id="gateForm">
+      <h2>Stride</h2>
+      <p>Enter the passcode to continue.</p>
+      <div class="err" id="gateError"></div>
+      <input id="gateInput" type="password" autocomplete="off" inputmode="text" placeholder="Passcode" />
+      <button class="btn primary" style="width:100%; justify-content:center;" id="gateBtn">Unlock</button>
+    </div>
+    <div id="gateUnset" style="display:none;">
+      <h2>Stride</h2>
+      <p>No passcode has been set up yet. See SETUP.md, or open passcode-tool.html to create one.</p>
+    </div>
+  </div>
+</div>
+
 <div class="wrap">
 
   <header class="top fade-in">
@@ -244,7 +289,7 @@
     <div style="display:flex; flex-direction:column; align-items:flex-end; gap:4px;">
       <div style="display:flex; align-items:center; gap:16px;">
         <div class="conn-status" id="connStatus" onclick="loadEverything(0,true)" title="Click to retry"><span class="dotlive"></span><span id="connText">connecting…</span></div>
-        <div class="goal">Manchester Marathon &middot; target sub-3:30 (pending 20 Sep gate)</div>
+        <div class="goal">York Marathon &middot; target sub-3:30 (pending 20 Sep gate)</div>
       </div>
       <div class="conn-detail" id="connDetail"></div>
     </div>
@@ -265,6 +310,7 @@
       <div>
         <div class="countdown-label">Race day in</div>
         <div class="countdown"><span id="daysLeft">--</span><span class="unit">days</span></div>
+        <div class="countdown-date" id="raceDateLabel">until York Marathon</div>
         <div class="race-meta">Target: <b>3:30:00</b> (pending gate) &middot; ~<b>4:58/km</b><br/>Current: <b id="curWeekLabel">–</b></div>
       </div>
       <div class="hero-mid">
@@ -560,7 +606,7 @@ let WEEKS = [
     {day:'Sat', type:'easy', title:'Easy run', targets:'6km', detail:'6km easy pace.'},
     {day:'Sun', type:'long', title:'Long run + MP finish', targets:'32km, last 12km @ MP', detail:'32km, with the final 12km at marathon pace — the peak long run of the block.'},
   ]},
-  { km:21, phase:'peak', headline:'Sharpen', sessions:[
+  { km:21, phase:'taper', headline:'Sharpen', sessions:[
     {day:'Mon', type:'rest', title:'Rest, or bike', targets:'30min', detail:'Rest, or 30min bike.'},
     {day:'Tue', type:'easy', title:'Easy run + Strength B only', targets:'6km', detail:'6km easy, then Strength B only.'},
     {day:'Wed', type:'bike', title:'Bike easy', targets:'40min', detail:'40min easy spin.'},
@@ -938,6 +984,7 @@ function renderHistory(){
 let miniLoadChartInstance = null;
 function renderHero(){
   document.getElementById('daysLeft').textContent = Math.max(0, Math.ceil((RACE_DATE - Date.now())/86400000));
+  document.getElementById('raceDateLabel').textContent = `until York Marathon, ${fmtLong(RACE_DATE)}`;
   if(state.vo2History.length>0){
     const latest = state.vo2History[state.vo2History.length-1];
     document.getElementById('heroVdot').textContent = latest.vdot;
@@ -976,16 +1023,70 @@ async function loadEverything(retryCount = 0, manualRetry = false){
   }
 }
 
-document.getElementById('vo2Date').value = fmtDate(new Date());
-document.getElementById('stravaDate').value = fmtDate(new Date());
-document.getElementById('modalBackdrop').addEventListener('click', (e)=>{ if(e.target.id==='modalBackdrop') closeModal(); });
-setConnStatus(true, 'connecting…', '');
-renderStaticPlan();
-loadEverything();
+function bootApp(){
+  document.getElementById('vo2Date').value = fmtDate(new Date());
+  document.getElementById('stravaDate').value = fmtDate(new Date());
+  document.getElementById('modalBackdrop').addEventListener('click', (e)=>{ if(e.target.id==='modalBackdrop') closeModal(); });
+  setConnStatus(true, 'connecting…', '');
+  renderStaticPlan();
+  loadEverything();
+}
+
+/* ============================================================
+   ACCESS GATE
+   Installed-to-homescreen copies (display-mode: standalone, or iOS's
+   navigator.standalone) skip the gate entirely. A normal browser tab is
+   gated until the right passcode is entered once; after that this device
+   is remembered via localStorage and the gate won't reappear here again.
+   ============================================================ */
+function isStandaloneApp(){
+  return (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) || window.navigator.standalone === true;
+}
+async function sha256Hex(str){
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
+  return [...new Uint8Array(buf)].map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+async function attemptUnlock(){
+  const input = document.getElementById('gateInput');
+  const btn = document.getElementById('gateBtn');
+  const err = document.getElementById('gateError');
+  const val = input.value;
+  if(!val) return;
+  err.textContent = ''; btn.disabled = true; btn.textContent = 'Checking…';
+  try{
+    const hex = await sha256Hex(val);
+    if(hex === window.STRIDE_PASSCODE_HASH){
+      localStorage.setItem('stride_unlocked', '1');
+      document.getElementById('accessGate').classList.remove('open');
+      bootApp();
+    } else {
+      err.textContent = 'Wrong passcode — try again.';
+      input.value = ''; input.focus();
+    }
+  } finally {
+    btn.disabled = false; btn.textContent = 'Unlock';
+  }
+}
+document.getElementById('gateBtn').addEventListener('click', attemptUnlock);
+document.getElementById('gateInput').addEventListener('keydown', (e)=>{ if(e.key === 'Enter') attemptUnlock(); });
+
+const passcodeConfigured = !!(window.STRIDE_PASSCODE_HASH && window.STRIDE_PASSCODE_HASH.length === 64);
+if(isStandaloneApp() || localStorage.getItem('stride_unlocked') === '1'){
+  bootApp();
+} else {
+  document.getElementById('accessGate').classList.add('open');
+  if(!passcodeConfigured){
+    document.getElementById('gateForm').style.display = 'none';
+    document.getElementById('gateUnset').style.display = 'block';
+  } else {
+    document.getElementById('gateInput').focus();
+  }
+}
 
 // Registers the service worker — this is what lets the app be added to a home
 // screen and open full-screen. Failure is harmless: the site just works as a
-// normal web page.
+// normal web page. Runs regardless of the access gate — installing the app
+// doesn't reveal any training data on its own.
 if('serviceWorker' in navigator){
   window.addEventListener('load', ()=> navigator.serviceWorker.register('./sw.js').catch(()=>{}));
 }

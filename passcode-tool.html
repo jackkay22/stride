@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="robots" content="noindex, nofollow" />
+<title>Stride — set your passcode</title>
+<style>
+  body{margin:0; min-height:100vh; display:flex; align-items:center; justify-content:center; padding:24px;
+    background:#0a0f1a; background-image:radial-gradient(120% 140% at 15% 0%, #10192c 0%, #0a1120 45%, #070b13 100%);
+    font-family:system-ui, sans-serif; color:#e7ebf2;}
+  .card{max-width:440px; width:100%; background:rgba(255,255,255,0.035); backdrop-filter:blur(14px);
+    border:1px solid rgba(255,255,255,0.08); border-radius:20px; padding:30px; box-shadow:0 12px 28px rgba(0,0,0,0.28);}
+  h1{font-size:19px; margin:0 0 8px; color:#f5f7fb;}
+  p{color:#8a94a8; font-size:13.5px; line-height:1.6; margin:0 0 20px;}
+  label{display:block; font-size:11px; text-transform:uppercase; letter-spacing:0.08em; color:#7c879c; margin-bottom:6px; font-weight:600;}
+  input{width:100%; box-sizing:border-box; background:rgba(0,0,0,0.25); border:1px solid rgba(255,255,255,0.1);
+    color:#e7ebf2; padding:11px 12px; border-radius:10px; font-size:14px; margin-bottom:16px;}
+  input:focus{outline:none; border-color:rgba(111,159,242,0.5);}
+  button{width:100%; background:linear-gradient(90deg, #3d6fd6, #6f9ff2); color:#0a1120; border:none; font-weight:700;
+    padding:12px; border-radius:999px; font-size:14px; cursor:pointer;}
+  button:hover{filter:brightness(1.08);}
+  button:disabled{opacity:0.5; cursor:default;}
+  .result{margin-top:20px; display:none;}
+  .result.show{display:block;}
+  .result textarea{width:100%; box-sizing:border-box; background:rgba(0,0,0,0.35); border:1px solid rgba(111,174,140,0.3);
+    color:#a9d8c0; padding:12px; border-radius:10px; font-family:ui-monospace, monospace; font-size:12.5px; height:70px; resize:none;}
+  .copybtn{margin-top:8px; background:rgba(255,255,255,0.06); color:#e7ebf2; border:1px solid rgba(255,255,255,0.12);}
+  .steps{margin-top:20px; padding-top:18px; border-top:1px solid rgba(255,255,255,0.08); font-size:12.5px; color:#8a94a8; line-height:1.8;}
+  .steps b{color:#cdd5e3;}
+  .note{margin-top:14px; font-size:12px; color:#5c6578;}
+</style>
+</head>
+<body>
+<div class="card">
+  <h1>Set your Stride passcode</h1>
+  <p>This runs entirely in your browser — the passcode you type below is never sent anywhere,
+     not even to Claude. It only ever leaves this page as a scrambled version of itself.</p>
+
+  <label for="pc">Choose a passcode</label>
+  <input id="pc" type="text" autocomplete="off" placeholder="something only you'd know" />
+
+  <button id="go">Generate</button>
+
+  <div class="result" id="result">
+    <label>Paste this over the line in <code>passcode.js</code></label>
+    <textarea id="out" readonly></textarea>
+    <button class="copybtn" id="copy">Copy</button>
+  </div>
+
+  <div class="steps">
+    <b>To finish:</b><br/>
+    1. On GitHub, open <b>passcode.js</b> in the <b>stride</b> repo<br/>
+    2. Click the pencil (edit) icon<br/>
+    3. Select all the existing text and paste this in its place<br/>
+    4. Click <b>Commit changes</b><br/>
+    A minute or two later the site updates and your new passcode is live.
+  </div>
+  <div class="note">Forgot it later? Just come back here, generate a new one, and repeat these steps.</div>
+</div>
+<script>
+async function sha256Hex(str){
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
+  return [...new Uint8Array(buf)].map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+document.getElementById('go').addEventListener('click', async ()=>{
+  const val = document.getElementById('pc').value;
+  if(!val){ return; }
+  const hex = await sha256Hex(val);
+  document.getElementById('out').value = `window.STRIDE_PASSCODE_HASH = "${hex}";`;
+  document.getElementById('result').classList.add('show');
+});
+document.getElementById('copy').addEventListener('click', ()=>{
+  const out = document.getElementById('out');
+  out.select();
+  navigator.clipboard?.writeText(out.value).catch(()=> document.execCommand('copy'));
+});
+document.getElementById('pc').addEventListener('keydown', (e)=>{ if(e.key==='Enter') document.getElementById('go').click(); });
+</script>
+</body>
+</html>
