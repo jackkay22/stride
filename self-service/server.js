@@ -57,6 +57,21 @@ function requireUser(req, res, next) {
   }).catch((err) => res.status(500).json({ error: err.message }));
 }
 
+// Wraps an async route handler so a thrown/rejected error always comes back
+// as a clean JSON error, instead of Express's default HTML error page —
+// which breaks the frontend's res.json() parsing and shows a generic
+// "Request failed (500)" with no way to tell what actually went wrong.
+function asyncRoute(fn) {
+  return (req, res, next) => {
+    Promise.resolve(fn(req, res, next)).catch((err) => {
+      console.error(err);
+      if (!res.headersSent) {
+        res.status(500).json({ error: `Something went wrong on the server: ${err.message}` });
+      }
+    });
+  };
+}
+
 const publicShape = (s) => ({
   date: s.session_date,
   week: s.week,
@@ -83,7 +98,7 @@ async function recordChange(supabase, userId, entry) {
 /* ============================================================
    PROFILE — race details captured from the plan's meta block
    ============================================================ */
-app.get('/api/profile', requireUser, async (req, res) => {
+app.get('/api/profile', requireUser, asyncRoute(async (req, res) => {
   const { data, error } = await req.supabase
     .from('su_profiles')
     .select('*')
@@ -91,12 +106,12 @@ app.get('/api/profile', requireUser, async (req, res) => {
     .maybeSingle();
   if (error) return res.status(500).json({ error: error.message });
   res.json(data);
-});
+}));
 
 /* ============================================================
    PLAN — read
    ============================================================ */
-app.get('/api/plan', requireUser, async (req, res) => {
+app.get('/api/plan', requireUser, asyncRoute(async (req, res) => {
   const { data, error } = await req.supabase
     .from('su_plan_sessions')
     .select('*')
@@ -105,7 +120,7 @@ app.get('/api/plan', requireUser, async (req, res) => {
     .order('session_type');
   if (error) return res.status(500).json({ error: error.message });
   res.json(data.map(publicShape));
-});
+}));
 
 /* ============================================================
    PLAN — upload (validate + replace)
@@ -114,7 +129,7 @@ app.get('/api/plan', requireUser, async (req, res) => {
    upload function: same checks, but callable directly by the signed-in
    user instead of only by Jack via backend access.
    ============================================================ */
-app.post('/api/plan/upload', requireUser, async (req, res) => {
+app.post('/api/plan/upload', requireUser, asyncRoute(async (req, res) => {
   const result = validatePlan(req.body);
   if (!result.ok) {
     return res.status(400).json({
@@ -165,12 +180,12 @@ app.post('/api/plan/upload', requireUser, async (req, res) => {
   });
 
   res.json({ ok: true, summary, sessions_imported: rows.length, meta, ...(logWarning ? { log_warning: logWarning } : {}) });
-});
+}));
 
 /* ============================================================
    SESSIONS — log hit/niggle/miss against a session already in the plan
    ============================================================ */
-app.post('/api/sessions', requireUser, async (req, res) => {
+app.post('/api/sessions', requireUser, asyncRoute(async (req, res) => {
   const { week, day, status, notes } = req.body;
   const userId = req.user.id;
 
@@ -228,12 +243,12 @@ app.post('/api/sessions', requireUser, async (req, res) => {
   });
 
   res.json({ ok: true, summary, session: publicShape(updated), ...(logWarning ? { log_warning: logWarning } : {}) });
-});
+}));
 
 /* ============================================================
    CHANGE LOG
    ============================================================ */
-app.get('/api/change-log', requireUser, async (req, res) => {
+app.get('/api/change-log', requireUser, asyncRoute(async (req, res) => {
   const { data, error } = await req.supabase
     .from('su_change_log')
     .select('*')
@@ -242,7 +257,7 @@ app.get('/api/change-log', requireUser, async (req, res) => {
     .limit(50);
   if (error) return res.status(500).json({ error: error.message });
   res.json(data);
-});
+}));
 
 app.get('/api/meta', (_req, res) => res.json({ valid_session_types: VALID_SESSION_TYPES }));
 
