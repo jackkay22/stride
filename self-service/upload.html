@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Stride — Upload your plan</title>
+<meta name="robots" content="noindex" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Petrona:ital,wght@0,400;0,500;0,600;0,700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="./style.css" />
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="brand">
+      <div class="logo-mark">S</div>
+      <h1>Stride <span class="tag">Self-Service</span></h1>
+    </div>
+    <nav>
+      <a href="./index.html">Dashboard</a>
+      <a href="./generate-plan.html">Generate plan</a>
+      <button id="btn-sign-out">Sign out</button>
+    </nav>
+  </header>
+
+  <h2 class="page-title">Upload your plan</h2>
+  <p class="lede">
+    Paste in the JSON Claude gave you at the end of your planning conversation, or upload it as a
+    <code>.json</code> file. It's checked against the same format the
+    <a href="./generate-plan.html">Generate plan</a> prompt asks Claude for — if something doesn't
+    match, you'll get a specific list of what to fix rather than a generic error.
+  </p>
+
+  <div id="replace-warning" class="msg info" style="display:none;">
+    You already have a plan uploaded. Uploading a new one <b>replaces it completely</b> — any
+    hit/niggle/miss you've logged against sessions that don't reappear in the new file will be lost.
+  </div>
+
+  <div class="card">
+    <label for="file-input">Upload a file</label>
+    <input type="file" id="file-input" accept="application/json,.json" />
+
+    <label for="json-input" style="margin-top:22px;">…or paste the JSON directly</label>
+    <textarea class="json" id="json-input" placeholder='{"meta": {...}, "sessions": [...]}'></textarea>
+
+    <div class="checkbox-row" id="confirm-row" style="display:none;">
+      <input type="checkbox" id="confirm-replace" />
+      <label for="confirm-replace">I understand this replaces my existing plan.</label>
+    </div>
+
+    <div style="margin-top:18px;">
+      <button class="btn" id="btn-upload">Upload plan</button>
+    </div>
+
+    <div id="upload-msg"></div>
+  </div>
+
+  <footer class="note">
+    Uploading doesn't touch anyone else's data — your plan is stored against your account only,
+    enforced by the database itself (see the project README if you're curious how).
+  </footer>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="./config.js"></script>
+<script src="./app.js"></script>
+<script>
+requireSession();
+document.getElementById('btn-sign-out').addEventListener('click', signOut);
+
+const fileInput = document.getElementById('file-input');
+const jsonInput = document.getElementById('json-input');
+const uploadMsg = document.getElementById('upload-msg');
+const confirmRow = document.getElementById('confirm-row');
+const confirmBox = document.getElementById('confirm-replace');
+
+fileInput.addEventListener('change', async () => {
+  const file = fileInput.files[0];
+  if (!file) return;
+  jsonInput.value = await file.text();
+});
+
+(async () => {
+  try {
+    const profile = await apiFetch('/api/profile');
+    if (profile) {
+      document.getElementById('replace-warning').style.display = 'block';
+      confirmRow.style.display = 'flex';
+    }
+  } catch {
+    // not fatal — the upload attempt below will surface any real auth problem
+  }
+})();
+
+function showMsg(text, kind, details) {
+  uploadMsg.innerHTML = '';
+  if (!text) return;
+  const div = document.createElement('div');
+  div.className = `msg ${kind}`;
+  div.textContent = text;
+  if (details && details.length) {
+    const ul = document.createElement('ul');
+    details.forEach((d) => { const li = document.createElement('li'); li.textContent = d; ul.appendChild(li); });
+    div.appendChild(ul);
+  }
+  uploadMsg.appendChild(div);
+}
+
+document.getElementById('btn-upload').addEventListener('click', async () => {
+  const btn = document.getElementById('btn-upload');
+  showMsg('', '');
+
+  if (confirmRow.style.display !== 'none' && !confirmBox.checked) {
+    showMsg('Tick the box above to confirm before replacing your existing plan.', 'error');
+    return;
+  }
+
+  let parsed;
+  try {
+    parsed = JSON.parse(jsonInput.value);
+  } catch (err) {
+    showMsg("That's not valid JSON — check for a missing comma or bracket.", 'error', [err.message]);
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = 'Uploading…';
+  try {
+    const result = await apiFetch('/api/plan/upload', { method: 'POST', body: JSON.stringify(parsed) });
+    showMsg(`${result.summary} You're all set.`, 'ok');
+    setTimeout(() => { window.location.href = './index.html'; }, 1800);
+  } catch (err) {
+    showMsg(err.message, 'error', err.details);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Upload plan';
+  }
+});
+</script>
+</body>
+</html>

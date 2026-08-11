@@ -5,6 +5,12 @@ VO2 history, and syncs Whoop + Strava data so nothing resets when you close a ta
 
 Everything below uses free tiers — this shouldn't cost you anything for personal use.
 
+**This is Jack's personal, single-user app and stays that way.** For friends who want to run
+their own training block — their own account, their own Claude-generated plan, kept separate
+from everyone else's — see **[self-service/README.md](self-service/README.md)**. It's a
+deliberately separate deployment (own backend service, own database tables, same repo) so
+nothing there can affect this app.
+
 ## What you need to do (the parts only you can do)
 
 ### 1. Create a Supabase project (~3 min)

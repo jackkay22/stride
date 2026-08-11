@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Stride — Generate your plan</title>
+<meta name="robots" content="noindex" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Petrona:ital,wght@0,400;0,500;0,600;0,700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="./style.css" />
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="brand">
+      <div class="logo-mark">S</div>
+      <h1>Stride <span class="tag">Self-Service</span></h1>
+    </div>
+    <nav>
+      <a href="./index.html">Dashboard</a>
+      <a href="./upload.html">Upload plan</a>
+      <button id="btn-sign-out">Sign out</button>
+    </nav>
+  </header>
+
+  <h2 class="page-title">Generate your plan with Claude</h2>
+  <p class="lede">
+    Stride doesn't generate plans itself — you do that in your own conversation with Claude,
+    using your own account. Nothing here costs Jack anything, and no training details of yours
+    pass through his systems until you choose to upload the result. Three steps:
+  </p>
+
+  <div class="card">
+    <ol style="margin:0; padding-left:20px; color:var(--muted-2); font-size:14px; line-height:2;">
+      <li>Fill in the details below and click <b>Build my prompt</b>.</li>
+      <li>Copy it and paste it into a new conversation at <a href="https://claude.ai" target="_blank" rel="noopener">claude.ai</a> (or the Claude app). Talk it through with Claude like you would a coach — ask questions, push back, adjust — until you're happy.</li>
+      <li>When you're happy, ask Claude for the final JSON (the prompt already tells it to produce this) and bring it back to the <a href="./upload.html">Upload plan</a> page.</li>
+    </ol>
+  </div>
+
+  <div class="card">
+    <form id="plan-form">
+      <label for="race_name">Race name</label>
+      <input id="race_name" placeholder="e.g. London Marathon" required />
+
+      <label for="race_date">Race date</label>
+      <input id="race_date" type="date" required />
+
+      <label for="target_time">Target finish time (optional)</label>
+      <input id="target_time" placeholder="e.g. 3:30:00" />
+
+      <label for="block_start">Plan start date (must be a Monday)</label>
+      <input id="block_start" type="date" required />
+      <div class="hint" id="weeks-hint"></div>
+
+      <label for="current_mileage">Current weekly training volume</label>
+      <input id="current_mileage" placeholder="e.g. 20km/week across 3 runs" required />
+
+      <label for="training_days">Days per week you can train, and any fixed constraints</label>
+      <input id="training_days" placeholder="e.g. 4 days — Tue/Thu/Sat/Sun, no early mornings" required />
+
+      <label for="injury_history">Injury history / things to work around (optional)</label>
+      <textarea id="injury_history" placeholder="e.g. left knee flares up above 15km, cleared by physio in 2024"></textarea>
+
+      <label for="other_notes">Anything else worth knowing (optional)</label>
+      <textarea id="other_notes" placeholder="e.g. previous race times, strength training habits, upcoming travel"></textarea>
+
+      <div style="margin-top:20px;">
+        <button type="submit" class="btn">Build my prompt</button>
+      </div>
+    </form>
+  </div>
+
+  <div class="card" id="output-card" style="display:none;">
+    <div class="row between">
+      <label style="margin:0;">Your prompt — copy this into Claude</label>
+      <button class="btn secondary small" id="btn-copy">Copy</button>
+    </div>
+    <textarea class="json" id="prompt-output" readonly></textarea>
+    <div class="hint">
+      After Claude gives you the final JSON, copy just that (the code block) and paste it on the
+      <a href="./upload.html">Upload plan</a> page — no need to copy the rest of the conversation.
+    </div>
+  </div>
+
+  <footer class="note">
+    The JSON structure asked for in the prompt is exactly what the <a href="./upload.html">Upload
+    plan</a> page checks against. If you edit the prompt before sending it, keep the "OUTPUT
+    FORMAT" section intact or the upload step will reject the result with a list of what doesn't match.
+  </footer>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="./config.js"></script>
+<script src="./app.js"></script>
+<script>
+requireSession();
+document.getElementById('btn-sign-out').addEventListener('click', signOut);
+
+// Default plan start to next Monday.
+const blockStartInput = document.getElementById('block_start');
+const today = new Date();
+const nextMonday = new Date(today);
+nextMonday.setDate(today.getDate() + ((8 - today.getDay()) % 7 || 7));
+blockStartInput.value = nextMonday.toISOString().slice(0, 10);
+
+function weekday(dateStr) {
+  return new Date(dateStr + 'T00:00:00Z').getUTCDay(); // 0 = Sunday
+}
+function weeksBetween(startStr, endStr) {
+  const start = new Date(startStr + 'T00:00:00Z');
+  const end = new Date(endStr + 'T00:00:00Z');
+  return Math.max(1, Math.ceil((end - start) / (7 * 86400000)));
+}
+
+const weeksHint = document.getElementById('weeks-hint');
+function updateWeeksHint() {
+  const bs = blockStartInput.value;
+  const rd = document.getElementById('race_date').value;
+  if (!bs || !rd) { weeksHint.textContent = ''; return; }
+  if (weekday(bs) !== 1) {
+    weeksHint.textContent = "That date isn't a Monday — pick the Monday of the first training week.";
+    return;
+  }
+  if (bs >= rd) { weeksHint.textContent = 'Plan start must be before the race date.'; return; }
+  weeksHint.textContent = `That's ${weeksBetween(bs, rd)} weeks of training.`;
+}
+blockStartInput.addEventListener('change', updateWeeksHint);
+document.getElementById('race_date').addEventListener('change', updateWeeksHint);
+updateWeeksHint();
+
+document.getElementById('plan-form').addEventListener('submit', (e) => {
+  e.preventDefault();
+
+  const v = (id) => document.getElementById(id).value.trim();
+  const raceName = v('race_name');
+  const raceDate = v('race_date');
+  const targetTime = v('target_time') || 'no specific target — help me set a sensible one';
+  const blockStart = v('block_start');
+  const currentMileage = v('current_mileage');
+  const trainingDays = v('training_days');
+  const injuryHistory = v('injury_history') || "none I'm aware of";
+  const otherNotes = v('other_notes') || 'nothing else';
+
+  if (weekday(blockStart) !== 1) {
+    alert("Plan start date needs to be a Monday — see the note under that field.");
+    return;
+  }
+  if (blockStart >= raceDate) {
+    alert('Plan start date must be before the race date.');
+    return;
+  }
+
+  const totalWeeks = weeksBetween(blockStart, raceDate);
+
+  const prompt = `You're helping me build a personalised training plan for a race. Ask me any follow-up questions you need, and talk the plan through with me — I want to understand and agree with the approach, not just receive a file.
+
+MY DETAILS
+- Race: ${raceName} on ${raceDate}
+- Target finish time: ${targetTime}
+- Plan should start (Monday): ${blockStart}
+- Length of plan: ${totalWeeks} weeks (adjust if you think a different length suits me better, and update total_weeks below to match)
+- Current weekly training volume: ${currentMileage}
+- Days per week I can train, and constraints: ${trainingDays}
+- Injury history / things to work around: ${injuryHistory}
+- Anything else: ${otherNotes}
+
+WHAT I NEED
+Build me a week-by-week training plan from ${blockStart} to ${raceDate}, structured in phases the
+way a good coach would (e.g. base, build, peak, taper — your own phase names are fine), with every
+session specific about content (paces, distances, intervals, effort), not vague. Include rest days
+and, if relevant, strength/cross-training. Take my injury history seriously — flag anything in the
+plan that's a deliberate compromise because of it.
+
+OUTPUT FORMAT — IMPORTANT
+Once I'm happy with the plan, output the FULL plan as a single JSON object in one code block, in
+EXACTLY this structure (this is what my training app's upload page expects — keep the field names
+and top-level keys exactly as shown, don't add or remove any):
+
+{
+  "meta": {
+    "race_name": "${raceName}",
+    "race_date": "${raceDate}",
+    "target_time": "H:MM:SS, or null if no specific target",
+    "block_start": "${blockStart}",
+    "total_weeks": ${totalWeeks}
+  },
+  "sessions": [
+    {
+      "week": 1,
+      "day": "Mon",
+      "date": "YYYY-MM-DD",
+      "session_type": "easy | long | quality | strength | bike | rest | event",
+      "title": "short session name, e.g. 'Easy run' or 'Threshold intervals'",
+      "targets": "e.g. '8km @ easy pace' or null",
+      "detail": "1-2 sentence description of the session, or null",
+      "exercises": ["list", "of", "strings"] or null — only for strength sessions,
+      "phase": "your phase name for this week, e.g. 'base' or 'taper'",
+      "week_km": "this week's total distance as a string, e.g. '32', or null",
+      "week_headline": "short label for the week if it's a notable one (race, cutback, travel), else null"
+    }
+    // one object per calendar day from block_start to ${raceDate} inclusive — no gaps, including rest days
+  ]
+}
+
+Rules for the JSON:
+- Every single day in the date range needs one entry, including rest days (session_type: "rest").
+- "day" must be exactly one of Mon, Tue, Wed, Thu, Fri, Sat, Sun, and must match what "date" actually falls on.
+- "date" must be the real calendar date for that week/day, counted from block_start (week 1 = the 7 days starting ${blockStart}).
+- "week" starts at 1 and goes up by 1 every 7 days.
+- "session_type" must be exactly one of: easy, long, quality, strength, bike, rest, event — nothing else.
+- Don't put anything except the JSON inside that code block.
+
+Let's start by talking through the plan.`;
+
+  document.getElementById('prompt-output').value = prompt;
+  document.getElementById('output-card').style.display = 'block';
+  document.getElementById('output-card').scrollIntoView({ behavior: 'smooth' });
+});
+
+document.getElementById('btn-copy').addEventListener('click', async () => {
+  const el = document.getElementById('prompt-output');
+  try {
+    await navigator.clipboard.writeText(el.value);
+  } catch {
+    el.select();
+    document.execCommand('copy');
+  }
+  const btn = document.getElementById('btn-copy');
+  const original = btn.textContent;
+  btn.textContent = 'Copied';
+  setTimeout(() => { btn.textContent = original; }, 1500);
+});
+</script>
+</body>
+</html>
