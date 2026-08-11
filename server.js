@@ -4,17 +4,20 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import cron from 'node-cron';
 import { createClient } from '@supabase/supabase-js';
- 
+import { createMcpRouter } from './mcp-server.js';
+import { getPlan, getChangeLog, updateSession, rescheduleSession, PlanError } from './plan-service.js';
+
 dotenv.config();
- 
+
 const app = express();
 app.use(cors());
 app.use(express.json());
- 
+
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
- 
+
 const PORT = process.env.PORT || 3000;
 const BASE_URL = process.env.BASE_URL || `http://localhost:${PORT}`;
+const API_KEY = process.env.STRIDE_API_KEY;
  
 /* ============================================================
    SESSIONS LOG — hit/niggle/miss per planned session
@@ -26,11 +29,24 @@ app.get('/api/sessions', async (req, res) => {
 });
  
 app.post('/api/sessions', async (req, res) => {
-  const { week, day, status } = req.body;
+  const { week, day, status, notes } = req.body;
   if (!week || !day || !status) return res.status(400).json({ error: 'week, day, status are required' });
-  const { data, error } = await supabase.from('sessions_log').insert({ week, day, status }).select().single();
+  const { data, error } = await supabase.from('sessions_log').insert({ week, day, status, notes: notes ?? null, source: 'app' }).select().single();
   if (error) return res.status(500).json({ error: error.message });
- 
+
+  // Mirror onto plan_sessions so the app and Claude see the same statuses.
+  // week/day here are the original plan slot, which is what plan_sessions keys on.
+  await supabase
+    .from('plan_sessions')
+    .update({
+      status,
+      ...(notes !== undefined ? { notes } : {}),
+      status_updated_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    })
+    .eq('week', week)
+    .eq('day', day);
+
   // simple adaptive rule engine — mirrors the logic from the standalone prototype
   let adaptMsg = null;
   if (status === 'miss') {
@@ -275,6 +291,68 @@ cron.schedule('0 */3 * * *', async () => {
   await syncWhoop().catch(() => {});
 });
  
+/* ============================================================
+   PLAN — read is open like the rest of the app, writes need the API key.
+   The write logic itself lives in plan-service.js, shared with the MCP server.
+   ============================================================ */
+
+function requireApiKey(req, res, next) {
+  if (!API_KEY) return res.status(503).json({ error: 'STRIDE_API_KEY is not set on the server.' });
+  const header = req.get('authorization') || '';
+  const supplied = (header.toLowerCase().startsWith('bearer ') ? header.slice(7).trim() : null) || req.get('x-api-key');
+  if (supplied !== API_KEY) return res.status(401).json({ error: 'Bad or missing API key.' });
+  next();
+}
+
+// PlanError = the request didn't make sense (bad date, nothing scheduled, ambiguous day).
+// Anything else is a real fault and shouldn't leak its internals to the caller.
+function handleError(err, res) {
+  if (err instanceof PlanError) return res.status(400).json({ error: err.message, ...err.details });
+  console.error(err);
+  return res.status(500).json({ error: 'Internal error.' });
+}
+
+app.get('/api/plan', async (req, res) => {
+  try {
+    res.json(await getPlan(supabase, { from_date: req.query.from, to_date: req.query.to }));
+  } catch (err) {
+    handleError(err, res);
+  }
+});
+
+app.get('/api/change-log', async (req, res) => {
+  try {
+    res.json(await getChangeLog(supabase, { limit: Number(req.query.limit) || 50 }));
+  } catch (err) {
+    handleError(err, res);
+  }
+});
+
+app.post('/api/plan/update-session', requireApiKey, async (req, res) => {
+  try {
+    const { date, status, notes, session_type } = req.body;
+    res.json(await updateSession(supabase, { date, status, notes, session_type, source: 'claude' }));
+  } catch (err) {
+    handleError(err, res);
+  }
+});
+
+app.post('/api/plan/reschedule-session', requireApiKey, async (req, res) => {
+  try {
+    const { from_date, to_date, session_type, confirm, reason } = req.body;
+    const result = await rescheduleSession(supabase, {
+      from_date, to_date, session_type, confirm, reason, source: 'claude'
+    });
+    // 409 = "I need you to confirm this first", not a failure.
+    res.status(result.needs_confirmation ? 409 : 200).json(result);
+  } catch (err) {
+    handleError(err, res);
+  }
+});
+
+// MCP endpoint — what gets added as a custom connector in Claude.
+app.use('/mcp', createMcpRouter(supabase, API_KEY));
+
 app.get('/', (req, res) => res.send('Splits backend is running.'));
- 
+
 app.listen(PORT, () => console.log(`Splits backend listening on ${PORT}`));

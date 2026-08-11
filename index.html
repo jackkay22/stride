@@ -88,6 +88,8 @@
   .type.event{background:rgba(217,138,52,0.22); color:var(--amber); font-weight:700;}
   .session .body h3{margin:0 0 4px; font-size:15.5px; font-weight:600; font-family:'IBM Plex Sans';}
   .session .body .targets{color:var(--muted); font-size:13px; font-family:'IBM Plex Mono';}
+  .session .body .moved{display:inline-block; margin-top:5px; font-family:'IBM Plex Mono'; font-size:10.5px; text-transform:uppercase; letter-spacing:0.06em; color:var(--blue); background:#EAF1F9; border-radius:3px; padding:2px 6px;}
+  .session .body .snote{margin-top:5px; font-size:12.5px; color:var(--text); font-style:italic; opacity:0.8;}
   .session .actions{display:flex; gap:6px;}
   .btn{border:1px solid var(--line); background:transparent; color:var(--text); font-family:'IBM Plex Sans'; font-size:12.5px; font-weight:600; padding:8px 12px; border-radius:8px; cursor:pointer; transition:all .12s ease;}
   .btn:hover{border-color:var(--muted);}
@@ -380,8 +382,11 @@ const DAY_OFFSET = {Mon:0, Tue:1, Wed:2, Thu:3, Fri:4, Sat:5, Sun:6};
 const STRENGTH_A = ['Physio calf/tibialis rehab block (always first)', 'Goblet/trap-bar squat 3x5–8', 'Romanian deadlift 3x6–8', 'Rear-foot elevated split squat 3x8/leg', 'Nordic/slider hamstring curl 3x5', 'Copenhagen plank 2x20–30s/side'];
 const STRENGTH_B = ['Physio calf/tibialis rehab block (always first)', 'Hip thrust 3x8–10', 'Step-down 20–30cm box 3x8/leg', 'Single-leg RDL 3x8/leg', 'Nordic/slider hamstring curl 3x5', 'Pallof press 3x10/side', 'Side plank 3x30–45s/side'];
 
-/* Real 12-week plan. km = headline number shown on the track lane ('Race' for event weeks). */
-const WEEKS = [
+/* Real 12-week plan. km = headline number shown on the track lane ('Race' for event weeks).
+   This is the fallback copy. The backend holds the live version (which is what Claude
+   updates), and applyServerPlan() swaps the session lists below for the server's once
+   it loads. If the backend is asleep or unreachable, what you see here is what renders. */
+let WEEKS = [
   { km:9, phase:'rebuild', sessions:[
     {day:'Mon', type:'easy', title:'Easy run + Strength A', targets:'5km easy', detail:'5km easy pace, then Strength A (physio block first).'},
     {day:'Tue', type:'bike', title:'Bike easy', targets:'40min · HR<145', detail:'40min easy spin, keep HR under 145.'},
@@ -499,6 +504,42 @@ function currentWeekIndex(){ const diffDays = Math.floor((Date.now() - BLOCK_STA
 function weekForDate(dateStr){ const diffDays = Math.floor((new Date(dateStr) - BLOCK_START.getTime()) / 86400000); return Math.max(1, Math.min(TOTAL_WEEKS, Math.floor(diffDays/7)+1)); }
 function sessionDate(wk, day){ return addDays(weekStart(wk), DAY_OFFSET[day]); }
 function sessionsForWeek(wk){ return WEEKS[wk-1].sessions; }
+function dayNameForDate(dateStr){ const i = Math.floor((new Date(dateStr) - BLOCK_START.getTime()) / 86400000); return DAY_NAMES[((i % 7) + 7) % 7]; }
+const DAY_NAMES = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+
+/* Takes the plan as the backend now holds it and drops it into WEEKS, so anything
+   Claude has changed shows up here. Sessions are filed under the week their CURRENT
+   date falls in, which is how a rescheduled session appears in its new week.
+   Week-level furniture (km, phase, headline) stays as defined above. */
+function applyServerPlan(rows){
+  if(!Array.isArray(rows) || rows.length === 0) return false;
+  const buckets = WEEKS.map(()=> []);
+  rows.forEach(r=>{
+    const idx = weekForDate(r.date) - 1;
+    if(idx < 0 || idx >= buckets.length) return;
+    buckets[idx].push({
+      day: dayNameForDate(r.date),
+      date: r.date,
+      type: r.type,
+      title: r.title,
+      targets: r.targets || '',
+      detail: r.detail || '',
+      exercises: r.exercises || null,
+      movedFrom: r.moved ? r.moved.from : null,
+      status: r.status || null,
+      notes: r.notes || null,
+      key: `${r.week}-${r.day}`   // original slot — what sessions_log is keyed on
+    });
+  });
+  if(buckets.every(b => b.length === 0)) return false;
+  buckets.forEach((sessions, i)=>{
+    sessions.sort((a,b)=> a.date < b.date ? -1 : a.date > b.date ? 1 : 0);
+    WEEKS[i].sessions = sessions;
+  });
+  // Statuses and notes come back on the plan rows themselves now.
+  rows.forEach(r=>{ if(r.status) state.sessionLog[`${r.week}-${r.day}`] = { status: r.status, notes: r.notes, at: null }; });
+  return true;
+}
 
 let state = { currentWeek: currentWeekIndex(), sessionLog: {}, adaptLog: [], vo2History: [], whoopRows: [], stravaRows: [] };
 
@@ -547,13 +588,16 @@ function renderSessions(){
   document.getElementById('curWeekLabel').textContent = `Week ${state.currentWeek} (${w.phase})${w.headline ? ' — '+w.headline : ''}`;
   const el = document.getElementById('sessions'); el.innerHTML = '';
   w.sessions.forEach(s=>{
-    const key = `${state.currentWeek}-${s.day}`;
+    const key = s.key || `${state.currentWeek}-${s.day}`;
     const logged = state.sessionLog[key];
+    const note = (logged && logged.notes) || s.notes;
     const row = document.createElement('div');
     row.className = 'session';
     row.innerHTML = `
       <div class="tag-col"><div class="day">${s.day}</div><div class="type ${s.type}">${s.type}</div></div>
-      <div class="body"><h3>${s.title}</h3><div class="targets">${s.targets}</div></div>
+      <div class="body"><h3>${s.title}</h3><div class="targets">${s.targets}</div>${
+        s.movedFrom ? `<div class="moved">moved from ${s.movedFrom}</div>` : ''
+      }${note ? `<div class="snote">${note}</div>` : ''}</div>
       <div class="actions">
         <button class="btn hit ${logged && logged.status==='hit' ? 'done':''}" onclick="event.stopPropagation(); logSession('${key}','hit')">Hit</button>
         <button class="btn niggle ${logged && logged.status==='niggle' ? 'done':''}" onclick="event.stopPropagation(); logSession('${key}','niggle')">Niggle</button>
@@ -565,9 +609,13 @@ function renderSessions(){
 }
 function openModal(key, s){
   document.getElementById('modalTitle').textContent = s.title;
-  document.getElementById('modalMeta').textContent = `${s.day} · ${fmtDate(sessionDate(state.currentWeek, s.day))}${s.targets ? ' · '+s.targets : ''}`;
+  document.getElementById('modalMeta').textContent = `${s.day} · ${s.date || fmtDate(sessionDate(state.currentWeek, s.day))}${s.targets ? ' · '+s.targets : ''}`;
   document.getElementById('modalBackdrop').dataset.activeKey = key;
   let html = '';
+  if(s.movedFrom){ html += `<div class="block"><div class="lbl">Rescheduled</div><p>Moved here from ${s.movedFrom}.</p></div>`; }
+  const logged = state.sessionLog[key];
+  const note = (logged && logged.notes) || s.notes;
+  if(note){ html += `<div class="block"><div class="lbl">Notes</div><p>${note}</p></div>`; }
   if(s.exercises){ html += `<div class="block"><div class="lbl">Exercises</div><ul>${s.exercises.map(e=>`<li>${e}</li>`).join('')}</ul></div>`; }
   if(s.detail){ html += `<div class="block"><div class="lbl">Detail</div><p>${s.detail}</p></div>`; }
   document.getElementById('modalBody').innerHTML = html;
@@ -746,11 +794,14 @@ function renderStaticPlan(){ renderHero(); renderTrack(); renderSessions(); rend
 async function loadEverything(retryCount = 0, manualRetry = false){
   if(manualRetry) setConnStatus(true, 'retrying…', '');
   try{
-    const [sessions, adaptLog, vo2, whoop, strava] = await Promise.all([
-      apiGet('/api/sessions'), apiGet('/api/adapt-log'), apiGet('/api/vo2'), apiGet('/api/whoop'), apiGet('/api/strava')
+    const [sessions, adaptLog, vo2, whoop, strava, plan] = await Promise.all([
+      apiGet('/api/sessions'), apiGet('/api/adapt-log'), apiGet('/api/vo2'), apiGet('/api/whoop'), apiGet('/api/strava'),
+      // Older deploys won't have /api/plan yet — fall back to the built-in plan rather than failing the whole load.
+      apiGet('/api/plan').catch(()=> null)
     ]);
     state.sessionLog = {};
-    sessions.forEach(s => { state.sessionLog[`${s.week}-${s.day}`] = { status: s.status, at: s.logged_at }; });
+    sessions.forEach(s => { state.sessionLog[`${s.week}-${s.day}`] = { status: s.status, notes: s.notes, at: s.logged_at }; });
+    applyServerPlan(plan);
     state.adaptLog = adaptLog;
     state.vo2History = vo2.map(v => ({ date: v.entry_date, vo2max: Math.round(v.vo2max*10)/10, vdot: Math.round(v.vdot*10)/10 }));
     state.whoopRows = whoop.map(w => ({ date: w.entry_date, recovery: w.recovery_pct, rhr: w.resting_hr, hrv: w.hrv }));
