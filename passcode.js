@@ -9,4 +9,4 @@
 
    Left blank, the app stays locked for everyone, including you — this is
    deliberate: an unconfigured passcode fails closed, not open. */
-window.STRIDE_PASSCODE_HASH = "";
+window.STRIDE_PASSCODE_HASH = "e515e0d62b7b38241fc0233b3cb3957c489f15a59c0af893c1318ece99da0b32";
