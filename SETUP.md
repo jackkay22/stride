@@ -145,6 +145,32 @@ You can also see the raw record in Supabase → Table Editor → `change_log`.
 
 ---
 
+## Installing Stride on your phone
+
+The app can now be added to a home screen and opens full-screen, with its own icon —
+no app store involved. Nothing to set up on your end beyond the install itself.
+
+**iPhone (Safari — it must be Safari, Chrome on iOS can't do this):**
+
+1. Open <https://jackkay22.github.io/stride/>
+2. Tap the Share button (the square with the arrow)
+3. Scroll down, tap **Add to Home Screen**, then **Add**
+
+**Android (Chrome):**
+
+1. Open <https://jackkay22.github.io/stride/>
+2. Either tap the **Install** prompt if it appears, or open the ⋮ menu and tap
+   **Install app** / **Add to Home screen**
+
+Once installed it runs without the browser address bar. If you open it with no signal
+the app itself still loads, but the sessions won't — the training data always comes from
+the backend, deliberately, so it can't show you a stale plan.
+
+**After a redeploy:** the app checks for a new version each time you open it, so changes
+appear on next launch. If it ever looks stuck on an old version, close it fully and reopen.
+
+---
+
 ## Running the tests (optional)
 
 If you ever want to check nothing's broken, from the repo folder:

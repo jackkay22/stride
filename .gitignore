@@ -1,3 +1,11 @@
 node_modules/
 .env
 .env.local
+
+# Never commit the API key. This repo is public.
+# Keep the key in a password manager, not in a file next to the code.
+*API*Password*
+*api*key*
+*.key
+secrets*
+dev-preview.mjs

@@ -50,12 +50,34 @@ add `STRIDE_API_KEY` to Render, then add the connector in Claude's settings.
 | File | What it does |
 | --- | --- |
 | `index.html` | The app. Static, on GitHub Pages. Reads the plan from the backend, falls back to its own built-in copy if the backend is asleep. |
+| `manifest.webmanifest` | Makes the app installable to a home screen (name, icon, full-screen). |
+| `sw.js` | Service worker. Caches the app shell only — never the API, so the plan can't go stale. |
+| `icons/` | App icons, generated from the runner mark. |
 | `server.js` | Express app: Strava/Whoop sync, VO2, session log, and the plan endpoints. |
 | `plan-service.js` | The plan read/write logic and the safety checks. One implementation, used by both the HTTP endpoints and the MCP tools. |
 | `mcp-server.js` | Wraps that as MCP tools so Claude can call them mid-conversation. Mounted at `/mcp` on the same service. |
 | `schema.sql` | Database tables. Safe to re-run. |
 | `seed_plan.sql` | Loads the 12-week plan into `plan_sessions`. Generated from `index.html`. |
 | `test/` | `npm test` — 19 tests, run against an in-memory fake, never touch live data. |
+
+### Design
+
+The UI follows the "Stride Weekly Premium" handoff: dark radial background, glass day
+rows (translucent fill, 14px backdrop blur, hairline border, soft shadow), Petrona serif
+for headline and session-title moments, Manrope for everything else. Status is carried by
+a coloured left-edge accent bar plus an icon, not saturated fills — those colours are
+intentionally desaturated and shouldn't be brightened.
+
+Two things worth knowing:
+
+- **Session type tags are neutral grey**, per the handoff — the old colour-coded type
+  pills were dropped so status is the only thing carrying colour.
+- **Past sessions that were never logged show "Not logged", not "Missed"**. The handoff
+  has no state for this. Marking them missed would put a status in the log that was
+  never actually set.
+
+All dates render UK format — `13/08/2026` in rows, `Thursday, 13 Aug 2026` and
+`10–16 Aug 2026` for headlines. ISO dates are still what the API and database use.
 
 ### Plan endpoints
 
