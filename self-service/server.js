@@ -263,4 +263,16 @@ app.get('/api/meta', (_req, res) => res.json({ valid_session_types: VALID_SESSIO
 
 app.get('/', (_req, res) => res.send('Stride self-service backend is running.'));
 
+// Catches anything asyncRoute() can't — e.g. express.json() rejecting a
+// malformed request body, which calls next(err) directly rather than
+// throwing inside a route handler. Without this, that class of error still
+// fell through to Express's default HTML error page. Must be registered
+// after every route (Express identifies error handlers by their 4 arguments,
+// but by convention they go last).
+app.use((err, req, res, next) => {
+  console.error(err);
+  if (res.headersSent) return next(err);
+  res.status(400).json({ error: `Couldn't read that request: ${err.message}` });
+});
+
 app.listen(PORT, () => console.log(`Stride self-service backend listening on ${PORT}`));
