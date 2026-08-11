@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Stride — Self-Service</title>
+<meta name="description" content="Import and manage your own Claude-generated training plan." />
+<meta name="theme-color" content="#0a1120" />
+<meta name="robots" content="noindex" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Petrona:ital,wght@0,400;0,500;0,600;0,700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="./style.css" />
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="brand">
+      <div class="logo-mark">S</div>
+      <h1>Stride <span class="tag">Self-Service</span></h1>
+    </div>
+    <nav id="nav-signed-in" style="display:none;">
+      <a href="./generate-plan.html">Generate plan</a>
+      <a href="./upload.html">Upload plan</a>
+      <button id="btn-sign-out">Sign out</button>
+    </nav>
+  </header>
+
+  <!-- ============ SIGNED OUT: auth panel ============ -->
+  <section id="auth-panel">
+    <h2 class="page-title">Your own training plan, your own account</h2>
+    <p class="lede">
+      Sign up, generate a plan in your own conversation with Claude using our prompt template,
+      then upload it here. Your plan and progress are kept separate from everyone else's.
+    </p>
+
+    <div class="card" style="max-width:420px;">
+      <div class="row tabs">
+        <button id="tab-signin" class="active">Sign in</button>
+        <button id="tab-signup">Create account</button>
+      </div>
+
+      <form id="auth-form">
+        <label for="email">Email</label>
+        <input id="email" type="email" autocomplete="email" required />
+
+        <label for="password">Password</label>
+        <input id="password" type="password" autocomplete="current-password" minlength="8" required />
+        <div class="hint" id="password-hint" style="display:none;">At least 8 characters.</div>
+
+        <div style="margin-top:20px;">
+          <button type="submit" class="btn" id="auth-submit">Sign in</button>
+        </div>
+      </form>
+
+      <div class="row between" style="margin-top:14px;">
+        <a href="#" id="forgot-link" style="font-size:12.5px;">Forgot password?</a>
+      </div>
+
+      <div id="auth-msg"></div>
+    </div>
+  </section>
+
+  <!-- ============ SIGNED IN: dashboard ============ -->
+  <section id="dashboard-panel" style="display:none;">
+    <h2 class="page-title" id="dash-title">Your plan</h2>
+    <p class="lede" id="dash-lede"></p>
+
+    <div id="no-plan-card" class="card" style="display:none;">
+      <p style="margin:0 0 4px; color:var(--text); font-size:14.5px;">You haven't uploaded a plan yet.</p>
+      <p class="hint" style="margin-bottom:16px;">Generate one with Claude, then bring the file back here.</p>
+      <div class="row">
+        <a class="btn" href="./generate-plan.html">Generate your plan</a>
+        <a class="btn secondary" href="./upload.html">I already have a plan file</a>
+      </div>
+    </div>
+
+    <div id="plan-summary-card" class="card" style="display:none;">
+      <div class="stat-row"><div class="k">Race</div><div class="v" id="stat-race">—</div></div>
+      <div class="stat-row"><div class="k">Race date</div><div class="v" id="stat-date">—</div></div>
+      <div class="stat-row"><div class="k">Target time</div><div class="v" id="stat-target">—</div></div>
+      <div class="stat-row"><div class="k">Plan length</div><div class="v" id="stat-weeks">—</div></div>
+      <div class="row" style="margin-top:18px;">
+        <a class="btn secondary small" href="./upload.html">Replace plan</a>
+      </div>
+    </div>
+
+    <div id="plan-sessions"></div>
+  </section>
+
+  <footer class="note">
+    Stride Self-Service is a separate app from Jack's personal training tracker — see the
+    project README for how the two relate. This page doesn't send anything to Claude directly;
+    plan generation happens in your own Claude conversation, using the template on the
+    <a href="./generate-plan.html">Generate plan</a> page.
+  </footer>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="./config.js"></script>
+<script src="./app.js"></script>
+<script>
+const DAY_LABEL = { Mon: 'Mon', Tue: 'Tue', Wed: 'Wed', Thu: 'Thu', Fri: 'Fri', Sat: 'Sat', Sun: 'Sun' };
+
+function fmtDate(iso) {
+  if (!iso) return '—';
+  const d = new Date(iso + 'T00:00:00Z');
+  return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' });
+}
+
+function showMsg(el, text, kind, details) {
+  el.innerHTML = '';
+  if (!text) return;
+  const div = document.createElement('div');
+  div.className = `msg ${kind}`;
+  div.textContent = text;
+  if (details && details.length) {
+    const ul = document.createElement('ul');
+    details.forEach((d) => { const li = document.createElement('li'); li.textContent = d; ul.appendChild(li); });
+    div.appendChild(ul);
+  }
+  el.appendChild(div);
+}
+
+/* ---------- auth panel ---------- */
+let mode = 'signin';
+const tabSignin = document.getElementById('tab-signin');
+const tabSignup = document.getElementById('tab-signup');
+const authSubmit = document.getElementById('auth-submit');
+const passwordHint = document.getElementById('password-hint');
+const authMsg = document.getElementById('auth-msg');
+
+function setMode(m) {
+  mode = m;
+  tabSignin.classList.toggle('active', m === 'signin');
+  tabSignup.classList.toggle('active', m === 'signup');
+  authSubmit.textContent = m === 'signin' ? 'Sign in' : 'Create account';
+  document.getElementById('password').autocomplete = m === 'signin' ? 'current-password' : 'new-password';
+  passwordHint.style.display = m === 'signup' ? 'block' : 'none';
+  authMsg.innerHTML = '';
+}
+tabSignin.addEventListener('click', () => setMode('signin'));
+tabSignup.addEventListener('click', () => setMode('signup'));
+
+document.getElementById('auth-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  authSubmit.disabled = true;
+  authMsg.innerHTML = '';
+  const email = document.getElementById('email').value.trim();
+  const password = document.getElementById('password').value;
+  try {
+    if (mode === 'signin') {
+      const { error } = await sb.auth.signInWithPassword({ email, password });
+      if (error) throw error;
+      window.location.reload();
+    } else {
+      const { data, error } = await sb.auth.signUp({ email, password });
+      if (error) throw error;
+      if (data.session) {
+        window.location.reload();
+      } else {
+        showMsg(authMsg, 'Account created — check your email to confirm it, then sign in.', 'ok');
+        setMode('signin');
+      }
+    }
+  } catch (err) {
+    showMsg(authMsg, err.message, 'error');
+  } finally {
+    authSubmit.disabled = false;
+  }
+});
+
+document.getElementById('forgot-link').addEventListener('click', async (e) => {
+  e.preventDefault();
+  const email = document.getElementById('email').value.trim();
+  if (!email) { showMsg(authMsg, 'Enter your email above first, then click "Forgot password?" again.', 'info'); return; }
+  try {
+    const redirectTo = new URL('./reset-password.html', window.location.href).toString();
+    const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo });
+    if (error) throw error;
+    showMsg(authMsg, 'If that email has an account, a reset link is on its way.', 'ok');
+  } catch (err) {
+    showMsg(authMsg, err.message, 'error');
+  }
+});
+
+document.getElementById('btn-sign-out').addEventListener('click', signOut);
+
+/* ---------- dashboard ---------- */
+async function renderDashboard() {
+  const session = await getSession();
+  document.getElementById('nav-signed-in').style.display = 'flex';
+  document.getElementById('auth-panel').style.display = 'none';
+  document.getElementById('dashboard-panel').style.display = 'block';
+  document.getElementById('dash-lede').textContent = `Signed in as ${session.user.email}.`;
+
+  let profile = null, plan = [];
+  try {
+    profile = await apiFetch('/api/profile');
+    plan = await apiFetch('/api/plan');
+  } catch (err) {
+    document.getElementById('dashboard-panel').innerHTML = `<div class="msg error">Couldn't load your plan: ${err.message}</div>`;
+    return;
+  }
+
+  if (!profile || plan.length === 0) {
+    document.getElementById('no-plan-card').style.display = 'block';
+    return;
+  }
+
+  document.getElementById('dash-title').textContent = profile.race_name ? `Training for ${profile.race_name}` : 'Your plan';
+  document.getElementById('plan-summary-card').style.display = 'block';
+  document.getElementById('stat-race').textContent = profile.race_name || '—';
+  document.getElementById('stat-date').textContent = fmtDate(profile.race_date);
+  document.getElementById('stat-target').textContent = profile.target_time || '—';
+  document.getElementById('stat-weeks').textContent = profile.total_weeks ? `${profile.total_weeks} weeks` : '—';
+
+  const byWeek = new Map();
+  plan.forEach((s) => {
+    if (!byWeek.has(s.week)) byWeek.set(s.week, []);
+    byWeek.get(s.week).push(s);
+  });
+
+  const container = document.getElementById('plan-sessions');
+  container.innerHTML = '';
+  [...byWeek.keys()].sort((a, b) => a - b).forEach((week) => {
+    const sessions = byWeek.get(week);
+    const block = document.createElement('div');
+    block.className = 'week-block card';
+    const headline = sessions.find((s) => s.week_headline)?.week_headline;
+    block.innerHTML = `<h3>Week ${week}</h3>${headline ? `<div class="headline">${headline}</div>` : ''}`;
+    sessions.forEach((s) => {
+      const row = document.createElement('div');
+      row.className = 'session-row';
+      row.innerHTML = `
+        <div class="day">${DAY_LABEL[s.day] || s.day}<span class="d">${fmtDate(s.date)}</span></div>
+        <div class="body"><div class="title">${s.title}</div><div class="targets">${s.targets || ''}</div></div>
+        <div class="status-btns">
+          <button class="hit ${s.status === 'hit' ? 'active' : ''}" data-week="${s.week}" data-day="${s.day}" data-status="hit">Hit</button>
+          <button class="niggle ${s.status === 'niggle' ? 'active' : ''}" data-week="${s.week}" data-day="${s.day}" data-status="niggle">Niggle</button>
+          <button class="miss ${s.status === 'miss' ? 'active' : ''}" data-week="${s.week}" data-day="${s.day}" data-status="miss">Miss</button>
+        </div>`;
+      block.appendChild(row);
+    });
+    container.appendChild(block);
+  });
+
+  container.querySelectorAll('.status-btns button').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      const { week, day, status } = btn.dataset;
+      btn.disabled = true;
+      try {
+        await apiFetch('/api/sessions', { method: 'POST', body: JSON.stringify({ week: Number(week), day, status }) });
+        renderDashboard();
+      } catch (err) {
+        alert(`Couldn't save that: ${err.message}`);
+        btn.disabled = false;
+      }
+    });
+  });
+}
+
+(async () => {
+  const session = await getSession();
+  if (session) renderDashboard();
+})();
+</script>
+</body>
+</html>
