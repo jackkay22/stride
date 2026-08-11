@@ -18,8 +18,14 @@
 <link href="https://fonts.googleapis.com/css2?family=Petrona:ital,wght@0,400;0,500;0,600;0,700;1,500&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
 <!-- Holds only a scrambled fingerprint of the access passcode, never the passcode itself.
-     See passcode-tool.html to set or change it. -->
-<script src="./passcode.js"></script>
+     See passcode-tool.html to set or change it.
+
+     Loaded with a cache-busting query string, appended fresh on every page load, so a
+     passcode change on GitHub always takes effect on the very next reload. Without this,
+     GitHub Pages serves passcode.js with a 10-minute browser cache (Cache-Control:
+     max-age=600) — a device that loaded the page any time in that window would keep
+     seeing the old passcode until the cache expired, with no obvious reason why. -->
+<script>document.write('<scr' + 'ipt src="./passcode.js?v=' + Date.now() + '"></scr' + 'ipt>');</script>
 <style>
   /* Design tokens taken from the "Stride Weekly Premium" handoff. Status colours are
      deliberately desaturated — don't brighten them. */
@@ -263,7 +269,7 @@
       <h2>Stride</h2>
       <p>Enter the passcode to continue.</p>
       <div class="err" id="gateError"></div>
-      <input id="gateInput" type="password" autocomplete="off" inputmode="text" placeholder="Passcode" />
+      <input id="gateInput" type="password" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" inputmode="text" placeholder="Passcode" />
       <button class="btn primary" style="width:100%; justify-content:center;" id="gateBtn">Unlock</button>
     </div>
     <div id="gateUnset" style="display:none;">
