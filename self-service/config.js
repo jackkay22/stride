@@ -9,7 +9,7 @@
 // Edit this file directly on GitHub, the same way passcode.js works for the
 // personal app: github.com/jackkay22/stride/blob/main/self-service/config.js
 window.STRIDE_SS_CONFIG = {
-  SUPABASE_URL: 'https://xxxxxxxxxxxx.supabase.co',
-  SUPABASE_ANON_KEY: 'paste-your-supabase-anon-public-key-here',
-  BACKEND_URL: 'https://stride-self-service.onrender.com',
+  SUPABASE_URL: 'https://tttipmmgxszlmmjpqjus.supabase.co',
+  SUPABASE_ANON_KEY: 'sb_publishable_wKCh5htNNPr1UOExSCp8Yg_bdZuvaPN',
+  BACKEND_URL: 'https://stride-1-kqq4.onrender.com',
 };
