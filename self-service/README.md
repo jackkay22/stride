@@ -92,21 +92,50 @@ new Supabase project). Optionally, if you'd rather friends could use the app imm
 without confirming their email first, toggle off **"Confirm email"** on that same page — not
 required, just fewer steps for them.
 
-### 2. Get your Supabase anon key (~1 min)
+### 1b. Allow the app's URLs for email links (~2 min) — easy to miss
 
-Supabase → **Project Settings → API** → copy the **Project URL** and the **`anon` `public`**
-key (not the `service_role` one — this app deliberately never uses that one). You'll paste
-both into `config.js` in step 4.
+Supabase → **Authentication → URL Configuration**:
+
+- **Site URL:** `https://jackkay22.github.io/stride/self-service/`
+- **Redirect URLs:** add `https://jackkay22.github.io/stride/self-service/**`
+
+Without this, Supabase refuses to send people back to the app after a password reset or an
+email confirmation — it silently falls back to its own default URL, so the link in the email
+lands somewhere that isn't this app and the reset appears broken for no visible reason.
+
+### 2. Get your Supabase publishable key (~1 min)
+
+Supabase → **Project Settings → API** → copy the **Project URL** and the **Publishable key**
+(`sb_publishable_...`).
+
+**Not the Secret key** (`sb_secret_...`) — that one grants full admin access and this app
+deliberately never uses it. Supabase renamed these recently: what older docs and this repo's
+code call the "anon key" is what the dashboard now labels **Publishable**, and the old
+"service_role key" is now **Secret**. GitHub also actively blocks committing a Secret key, so
+if a commit gets rejected for containing a secret, that's the wrong key.
+
+You'll paste both of these into `config.js` in step 4, and into Render in step 3.
 
 ### 3. Deploy the backend as its own Render service (~5 min)
 
-Render → **New → Web Service** → connect this same repo.
+Render → **New → Web Service** → connect this same repo. This must be a **new, separate
+service** from the personal app's `stride` service, not a change to that one.
 
 - **Root Directory:** `self-service`
 - **Build command:** `npm install`
 - **Start command:** `npm start`
-- **Environment variables:** `SUPABASE_URL` and `SUPABASE_ANON_KEY` from step 2 (copy
-  `.env.example` for the exact names)
+- **Environment variables:** exactly two —
+
+  | Name | Value |
+  | --- | --- |
+  | `SUPABASE_URL` | Project URL from step 2 |
+  | `SUPABASE_ANON_KEY` | Publishable key from step 2 |
+
+> **The names have to match exactly.** The code looks up `SUPABASE_ANON_KEY` specifically —
+> the personal app uses a different name (`SUPABASE_SERVICE_KEY`) for a different key, and
+> setting that name here means this app finds nothing and every request fails with
+> "Invalid supabaseUrl" or similar. Don't reuse or link the personal app's variables here;
+> give this service its own two.
 
 Once it's deployed, note the URL Render gives it (something like
 `https://stride-self-service.onrender.com`) — you'll need it in the next step.
