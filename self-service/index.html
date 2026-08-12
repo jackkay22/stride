@@ -22,7 +22,7 @@
     <nav id="nav-signed-in" style="display:none;">
       <a href="./generate-plan.html">Generate plan</a>
       <a href="./upload.html">Upload plan</a>
-      <button id="btn-sign-out">Sign out</button>
+      <button class="link" id="btn-sign-out">Sign out</button>
     </nav>
   </header>
 
@@ -49,7 +49,7 @@
         <div class="hint" id="password-hint" style="display:none;">At least 8 characters.</div>
 
         <div style="margin-top:20px;">
-          <button type="submit" class="btn" id="auth-submit">Sign in</button>
+          <button type="submit" class="btn primary" id="auth-submit">Sign in</button>
         </div>
       </form>
 
@@ -67,40 +67,6 @@
 
   <!-- ============ SIGNED IN: dashboard ============ -->
   <section id="dashboard-panel" style="display:none;">
-    <h2 class="page-title" id="dash-title">Your plan</h2>
-    <p class="lede" id="dash-lede"></p>
-
-    <div id="no-plan-card" class="card" style="display:none;">
-      <p style="margin:0 0 4px; color:var(--text); font-size:14.5px;">You haven't uploaded a plan yet.</p>
-      <p class="hint" style="margin-bottom:16px;">Generate one with Claude, then bring the file back here.</p>
-      <div class="row">
-        <a class="btn" href="./generate-plan.html">Generate your plan</a>
-        <a class="btn secondary" href="./upload.html">I already have a plan file</a>
-      </div>
-    </div>
-
-    <div id="plan-summary-card" class="card" style="display:none;">
-      <div class="stat-row"><div class="k">Race</div><div class="v" id="stat-race">—</div></div>
-      <div class="stat-row"><div class="k">Race date</div><div class="v" id="stat-date">—</div></div>
-      <div class="stat-row"><div class="k">Target time</div><div class="v" id="stat-target">—</div></div>
-      <div class="stat-row"><div class="k">Plan length</div><div class="v" id="stat-weeks">—</div></div>
-      <div class="row" style="margin-top:18px;">
-        <a class="btn secondary small" href="./upload.html">Replace plan</a>
-      </div>
-    </div>
-
-    <div id="strava-card" class="card" style="display:none;">
-      <div class="row between">
-        <div>
-          <div style="font-size:14px; color:var(--title); font-weight:600;">Strava</div>
-          <div class="hint" id="strava-status" style="margin-top:3px;">Checking…</div>
-        </div>
-        <div class="row" id="strava-actions"></div>
-      </div>
-      <div id="strava-msg"></div>
-      <div id="strava-recent"></div>
-    </div>
-
     <div id="plan-loading" class="card" style="display:none;">
       <p style="margin:0; color:var(--muted); font-size:14px;">Loading your plan…</p>
       <p class="hint" id="plan-loading-slow" style="display:none; margin-top:8px;">
@@ -108,7 +74,72 @@
       </p>
     </div>
 
-    <div id="plan-sessions"></div>
+    <div id="no-plan-card" class="card" style="display:none;">
+      <h3>You haven't uploaded a plan yet</h3>
+      <p class="hint" style="margin-bottom:18px;">Generate one in your own conversation with Claude, then bring the file back here.</p>
+      <div class="row">
+        <a class="btn primary" href="./generate-plan.html">Generate your plan</a>
+        <a class="btn" href="./upload.html">I already have a plan file</a>
+      </div>
+    </div>
+
+    <div id="plan-body" style="display:none;">
+      <!-- hero: countdown + the numbers worth seeing at a glance -->
+      <div class="hero fade-in">
+        <div>
+          <div class="countdown-label">Race day in</div>
+          <div class="countdown"><span id="daysLeft">--</span><span class="unit">days</span></div>
+          <div class="countdown-date" id="raceDateLabel">&nbsp;</div>
+          <div class="race-meta" id="raceMeta">&nbsp;</div>
+        </div>
+        <div class="hero-right">
+          <div class="stat-row"><div class="k">Plan length</div><div class="v" id="stat-weeks">–</div></div>
+          <div class="stat-row"><div class="k">Biggest week</div><div class="v" id="stat-biggest">–</div></div>
+          <div class="stat-row"><div class="k">Sessions logged</div><div class="v" id="stat-logged">–</div></div>
+          <div class="stat-row"><div class="k">Strava</div><div class="v" id="stat-strava">–</div></div>
+        </div>
+      </div>
+
+      <div class="section-label">
+        <div class="idx">01</div><h2>The Block</h2>
+        <div class="sub">tap a week to jump there</div>
+      </div>
+      <div class="track" id="track"></div>
+
+      <div class="section-label">
+        <div class="idx">02</div><h2 id="weekHeading">This Week</h2>
+        <div class="sub">tap a session for the full breakdown</div>
+      </div>
+      <div class="week-head">
+        <div>
+          <div class="week-eyebrow" id="weekEyebrow">&nbsp;</div>
+          <div class="week-range" id="weekRange">&nbsp;</div>
+        </div>
+        <div class="week-meta">
+          <div class="logged" id="weekLogged">&nbsp;</div>
+          <div id="todayLabel">&nbsp;</div>
+        </div>
+      </div>
+      <div class="progress"><div id="weekProgress" style="width:0%"></div></div>
+      <div class="sessions" id="sessions"></div>
+
+      <div class="section-label" id="strava-section" style="display:none;">
+        <div class="idx">03</div><h2>Strava</h2>
+        <div class="sub" id="strava-status">&nbsp;</div>
+      </div>
+      <div id="strava-card" class="card" style="display:none;">
+        <div class="row between">
+          <div class="hint" id="strava-blurb" style="margin:0;">&nbsp;</div>
+          <div class="row" id="strava-actions"></div>
+        </div>
+        <div id="strava-msg"></div>
+        <div id="strava-recent"></div>
+      </div>
+
+      <div class="row" style="margin-top:40px;">
+        <a class="btn" href="./upload.html">Replace plan</a>
+      </div>
+    </div>
   </section>
 
   <footer class="note">
@@ -117,6 +148,22 @@
     plan generation happens in your own Claude conversation, using the template on the
     <a href="./generate-plan.html">Generate plan</a> page.
   </footer>
+</div>
+
+<!-- ============ session detail modal ============ -->
+<div class="modal-backdrop" id="modalBackdrop">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <button class="close" id="modalClose" aria-label="Close">&times;</button>
+    <h3 id="modalTitle">Session</h3>
+    <div style="color:var(--muted); font-size:12.5px; margin-bottom:4px;" id="modalMeta"></div>
+    <div id="modalBody"></div>
+    <div class="row" style="margin-top:22px;">
+      <button class="btn hit" data-status="hit">Hit</button>
+      <button class="btn niggle" data-status="niggle">Niggle</button>
+      <button class="btn miss" data-status="miss">Missed</button>
+    </div>
+    <div id="modalMsg"></div>
+  </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -220,16 +267,395 @@ document.getElementById('forgot-link').addEventListener('click', async (e) => {
 
 document.getElementById('btn-sign-out').addEventListener('click', signOut);
 
-/* ---------- dashboard ---------- */
+/* ---------- dashboard ----------
+   Mirrors the personal app's plan view: a countdown hero, a clickable track of
+   week lanes, then one week's sessions at a time as glass rows. Showing a
+   single week is what makes a long plan usable — a 37-week upload rendered in
+   full is thousands of pixels of scroll. */
 
-// Which week "today" falls in, so a long plan can open on the week that
-// actually matters instead of week 1. Falls back to week 1 for a plan that
-// hasn't started yet or has already finished.
+// currentWeek starts null, not 1: it's only set once the plan is loaded, from
+// whichever week contains today. Defaulting it to 1 would mean a returning
+// user always landed on week 1 of a 37-week plan, because week 1 is always
+// present and so the "is this week still valid?" check below would pass.
+const state = { plan: [], profile: null, byWeek: new Map(), weeks: [], currentWeek: null, strava: null };
+
+function todayISO() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+function fmtUK(iso) {
+  if (!iso) return '';
+  const [y, m, d] = iso.split('-');
+  return `${d}/${m}/${y}`;
+}
+
+function fmtLong(iso) {
+  if (!iso) return '';
+  return new Date(iso + 'T00:00:00Z')
+    .toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' });
+}
+
+function fmtRange(startIso, endIso) {
+  if (!startIso || !endIso) return '';
+  const s = new Date(startIso + 'T00:00:00Z');
+  const e = new Date(endIso + 'T00:00:00Z');
+  const opts = { day: 'numeric', month: 'short', timeZone: 'UTC' };
+  const sameMonth = s.getUTCMonth() === e.getUTCMonth();
+  const left = sameMonth
+    ? s.toLocaleDateString('en-GB', { day: 'numeric', timeZone: 'UTC' })
+    : s.toLocaleDateString('en-GB', opts);
+  return `${left}–${e.toLocaleDateString('en-GB', opts)} ${e.toLocaleDateString('en-GB', { year: 'numeric', timeZone: 'UTC' })}`;
+}
+
+/* Status chips — icons inherit the chip's colour via currentColor.
+   Copied from the personal app so both read identically. */
+const CHIP_ICON = {
+  hit: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 12.5 L9.5 18 L20 6" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  niggle: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3 L22 20 L2 20 Z" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"/><line x1="12" y1="9.5" x2="12" y2="14" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/><circle cx="12" cy="16.8" r="1" fill="currentColor"/></svg>',
+  miss: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M6 6 L18 18 M18 6 L6 18" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>',
+  today: '<span class="dot"></span>',
+  upcoming: '<span class="dot"></span>',
+  unlogged: '<span class="dot"></span>',
+};
+const CHIP_LABEL = { hit: 'Hit', niggle: 'Niggle', miss: 'Missed', today: 'Today', upcoming: 'Upcoming', unlogged: 'Not logged' };
+
+/* A logged status always wins. Otherwise the date decides — and a past session
+   that was never logged shows "Not logged", not "Missed": we don't know it was
+   missed, and saying so would put a status in the log the user never set.
+   Same rule as the personal app. */
+function sessionStateFor(s) {
+  if (s.status) return s.status;
+  const today = todayISO();
+  if (s.date === today) return 'today';
+  return s.date > today ? 'upcoming' : 'unlogged';
+}
+
+function weekStatusClass(week) {
+  const sessions = state.byWeek.get(week) || [];
+  let hit = 0, miss = 0, logged = 0;
+  sessions.forEach((s) => {
+    if (!s.status) return;
+    logged++;
+    if (s.status === 'hit') hit++;
+    if (s.status === 'miss') miss++;
+  });
+  if (!logged) return 'status-upcoming';
+  if (!miss) return 'status-hit';
+  if (!hit) return 'status-miss';
+  return 'status-partial';
+}
+
 function currentWeekOf(plan) {
-  const today = new Date().toISOString().slice(0, 10);
+  const today = todayISO();
   const upcoming = plan.find((s) => s.date >= today);
   if (upcoming) return upcoming.week;
   return plan.length ? plan[plan.length - 1].week : 1;
+}
+
+/* ---- hero ---- */
+function renderHero() {
+  const p = state.profile;
+  const raceDate = p?.race_date;
+  const days = raceDate
+    ? Math.ceil((new Date(raceDate + 'T00:00:00Z') - new Date(todayISO() + 'T00:00:00Z')) / 86400000)
+    : null;
+
+  document.getElementById('daysLeft').textContent = days === null ? '--' : Math.max(0, days);
+  document.getElementById('raceDateLabel').textContent =
+    p?.race_name ? `until ${p.race_name}` : raceDate ? `until race day` : '';
+
+  const meta = document.getElementById('raceMeta');
+  meta.innerHTML = '';
+  if (raceDate) {
+    const line = document.createElement('div');
+    line.textContent = fmtLong(raceDate);
+    meta.appendChild(line);
+  }
+  if (p?.target_time) {
+    const line = document.createElement('div');
+    line.append('Target: ');
+    const b = document.createElement('b');
+    b.textContent = p.target_time;
+    line.appendChild(b);
+    meta.appendChild(line);
+  }
+
+  const totalLogged = state.plan.filter((s) => s.status).length;
+  document.getElementById('stat-weeks').textContent = state.weeks.length ? `${state.weeks.length} weeks` : '–';
+  document.getElementById('stat-logged').textContent = `${totalLogged} of ${state.plan.length}`;
+
+  // "Biggest week" uses week_km when the plan supplies it, since that's the
+  // author's own number; otherwise fall back to counting non-rest sessions.
+  let biggest = '–';
+  const kmWeeks = state.weeks
+    .map((w) => {
+      const raw = (state.byWeek.get(w) || []).find((s) => s.week_km)?.week_km;
+      const n = parseFloat(raw);
+      return Number.isFinite(n) ? { week: w, km: n } : null;
+    })
+    .filter(Boolean);
+  if (kmWeeks.length) {
+    const top = kmWeeks.reduce((a, b) => (b.km > a.km ? b : a));
+    biggest = `${top.km} km · wk ${top.week}`;
+  }
+  document.getElementById('stat-biggest').textContent = biggest;
+}
+
+/* ---- the block ---- */
+function renderTrack() {
+  const el = document.getElementById('track');
+  el.innerHTML = '';
+  state.weeks.forEach((wk) => {
+    const sessions = state.byWeek.get(wk) || [];
+    const isEvent = sessions.some((s) => s.type === 'event');
+    const km = sessions.find((s) => s.week_km)?.week_km;
+    const phase = sessions.find((s) => s.phase)?.phase || '';
+    const headline = sessions.find((s) => s.week_headline)?.week_headline;
+
+    let statusClass = 'status-upcoming';
+    if (wk < state.currentWeek) statusClass = weekStatusClass(wk);
+    if (wk === state.currentWeek) statusClass = 'status-current';
+
+    const lane = document.createElement('button');
+    lane.type = 'button';
+    lane.className = `lane ${statusClass}${isEvent ? ' status-event' : ''}`;
+    lane.title = headline || `Week ${wk}${phase ? ' — ' + phase : ''}`;
+
+    const wkEl = document.createElement('span');
+    wkEl.className = 'wk';
+    wkEl.textContent = `W${wk}`;
+    const phaseEl = document.createElement('span');
+    phaseEl.className = 'phase';
+    phaseEl.textContent = phase;
+    const kmEl = document.createElement('span');
+    kmEl.className = 'km';
+    kmEl.textContent = isEvent && !km ? 'Race' : km ? `${km}k` : '·';
+
+    const top = document.createElement('div');
+    top.className = 'lane-top';
+    top.append(wkEl, phaseEl);
+    lane.append(top, kmEl);
+    lane.addEventListener('click', () => {
+      state.currentWeek = wk;
+      renderTrack();
+      renderSessions();
+      document.querySelector('.week-head')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+    el.appendChild(lane);
+  });
+}
+
+/* ---- this week's sessions ---- */
+function renderSessions() {
+  const wk = state.currentWeek;
+  const sessions = state.byWeek.get(wk) || [];
+  const phase = sessions.find((s) => s.phase)?.phase || '';
+  const headline = sessions.find((s) => s.week_headline)?.week_headline;
+
+  document.getElementById('weekHeading').textContent = headline || 'This Week';
+  document.getElementById('weekEyebrow').textContent =
+    `Week ${wk} of ${state.weeks.length}${phase ? ' · ' + phase : ''}`;
+  document.getElementById('weekRange').textContent = sessions.length
+    ? fmtRange(sessions[0].date, sessions[sessions.length - 1].date)
+    : '';
+  document.getElementById('todayLabel').textContent = `Today is ${fmtLong(todayISO())}`;
+
+  const el = document.getElementById('sessions');
+  el.innerHTML = '';
+  let loggedCount = 0;
+
+  sessions.forEach((s) => {
+    const st = sessionStateFor(s);
+    if (['hit', 'niggle', 'miss'].includes(st)) loggedCount++;
+
+    const row = document.createElement('div');
+    row.className = `session is-${st}`;
+    row.tabIndex = 0;
+    row.setAttribute('role', 'button');
+    row.setAttribute('aria-label', `${s.title}, ${fmtLong(s.date)} — ${CHIP_LABEL[st]}`);
+
+    const accent = document.createElement('div');
+    accent.className = 'accent';
+    row.appendChild(accent);
+    if (st === 'today') {
+      const ring = document.createElement('div');
+      ring.className = 'ring';
+      row.appendChild(ring);
+    }
+
+    const left = document.createElement('div');
+    const dayEl = document.createElement('div');
+    dayEl.className = 'day';
+    dayEl.textContent = s.day;
+    const dateEl = document.createElement('div');
+    dateEl.className = 'sdate';
+    dateEl.textContent = fmtUK(s.date);
+    left.append(dayEl, dateEl);
+
+    // Built via textContent throughout — titles and notes come from a
+    // user-uploaded plan file and must never be treated as markup.
+    const body = document.createElement('div');
+    body.className = 'body';
+    const typeEl = document.createElement('span');
+    typeEl.className = 'type';
+    typeEl.textContent = s.type;
+    const h3 = document.createElement('h3');
+    h3.textContent = s.title;
+    const targets = document.createElement('div');
+    targets.className = 'targets';
+    targets.textContent = s.targets || s.detail || '';
+    body.append(typeEl, h3, targets);
+    if (s.notes) {
+      const note = document.createElement('div');
+      note.className = 'snote';
+      note.textContent = s.notes;
+      body.appendChild(note);
+    }
+
+    const status = document.createElement('div');
+    status.className = 'sstatus';
+    const chip = document.createElement('span');
+    chip.className = `chip ${st}`;
+    chip.innerHTML = CHIP_ICON[st]; // fixed inline SVG, not user content
+    chip.append(CHIP_LABEL[st]);
+    status.appendChild(chip);
+
+    row.append(left, body, status);
+    row.addEventListener('click', () => openModal(s));
+    row.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openModal(s); }
+    });
+    el.appendChild(row);
+  });
+
+  const total = sessions.length || 1;
+  document.getElementById('weekLogged').textContent = `${loggedCount} of ${sessions.length} sessions logged`;
+  document.getElementById('weekProgress').style.width = `${Math.round((loggedCount / total) * 100)}%`;
+}
+
+/* ---- session detail modal ---- */
+let modalSession = null;
+
+function openModal(s) {
+  modalSession = s;
+  document.getElementById('modalTitle').textContent = s.title;
+  document.getElementById('modalMeta').textContent =
+    `${fmtLong(s.date)}${s.targets ? ' · ' + s.targets : ''}`;
+  document.getElementById('modalMsg').innerHTML = '';
+
+  const body = document.getElementById('modalBody');
+  body.innerHTML = '';
+
+  const addBlock = (label, text) => {
+    const block = document.createElement('div');
+    block.className = 'block';
+    const lbl = document.createElement('div');
+    lbl.className = 'lbl';
+    lbl.textContent = label;
+    const p = document.createElement('p');
+    p.textContent = text;
+    block.append(lbl, p);
+    body.appendChild(block);
+  };
+
+  if (s.detail) addBlock('The session', s.detail);
+  if (s.phase) addBlock('Phase', s.phase + (s.week_headline ? ` — ${s.week_headline}` : ''));
+  if (s.notes) addBlock('Your note', s.notes);
+
+  if (Array.isArray(s.exercises) && s.exercises.length) {
+    const block = document.createElement('div');
+    block.className = 'block';
+    const lbl = document.createElement('div');
+    lbl.className = 'lbl';
+    lbl.textContent = 'Exercises';
+    const ul = document.createElement('ul');
+    s.exercises.forEach((ex) => {
+      const li = document.createElement('li');
+      li.textContent = ex;
+      ul.appendChild(li);
+    });
+    block.append(lbl, ul);
+    body.appendChild(block);
+  }
+
+  // Grey out whichever status is already set, so the modal reflects reality.
+  document.querySelectorAll('#modalBackdrop .btn[data-status]').forEach((b) => {
+    b.classList.toggle('done', s.status === b.dataset.status);
+    b.disabled = false;
+  });
+
+  document.getElementById('modalBackdrop').classList.add('open');
+  document.getElementById('modalClose').focus();
+}
+
+function closeModal() {
+  document.getElementById('modalBackdrop').classList.remove('open');
+  modalSession = null;
+}
+
+document.getElementById('modalClose').addEventListener('click', closeModal);
+document.getElementById('modalBackdrop').addEventListener('click', (e) => {
+  if (e.target.id === 'modalBackdrop') closeModal();
+});
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') closeModal();
+});
+
+document.querySelectorAll('#modalBackdrop .btn[data-status]').forEach((btn) => {
+  btn.addEventListener('click', async () => {
+    if (!modalSession) return;
+    const status = btn.dataset.status;
+    const buttons = document.querySelectorAll('#modalBackdrop .btn[data-status]');
+    buttons.forEach((b) => { b.disabled = true; });
+    try {
+      await apiFetch('/api/sessions', {
+        method: 'POST',
+        body: JSON.stringify({ week: modalSession.week, day: modalSession.day, status }),
+      });
+      closeModal();
+      await loadPlan();
+    } catch (err) {
+      showMsg(document.getElementById('modalMsg'), err.message, 'error');
+      buttons.forEach((b) => { b.disabled = false; });
+    }
+  });
+});
+
+/* ---- load + orchestrate ---- */
+async function loadPlan() {
+  let profile = null, plan = [];
+  try {
+    profile = await apiFetch('/api/profile');
+    plan = await apiFetch('/api/plan');
+  } catch (err) {
+    showMsg(document.getElementById('plan-loading'), `Couldn't load your plan: ${err.message}`, 'error');
+    document.getElementById('plan-loading').style.display = 'block';
+    return false;
+  }
+
+  if (!profile || plan.length === 0) {
+    document.getElementById('no-plan-card').style.display = 'block';
+    document.getElementById('plan-body').style.display = 'none';
+    return true;
+  }
+
+  state.profile = profile;
+  state.plan = plan;
+  state.byWeek = new Map();
+  plan.forEach((s) => {
+    if (!state.byWeek.has(s.week)) state.byWeek.set(s.week, []);
+    state.byWeek.get(s.week).push(s);
+  });
+  state.weeks = [...state.byWeek.keys()].sort((a, b) => a - b);
+  if (!state.weeks.includes(state.currentWeek)) state.currentWeek = currentWeekOf(plan);
+
+  document.getElementById('no-plan-card').style.display = 'none';
+  document.getElementById('plan-body').style.display = 'block';
+  renderHero();
+  renderTrack();
+  renderSessions();
+  return true;
 }
 
 async function renderDashboard() {
@@ -237,182 +663,67 @@ async function renderDashboard() {
   document.getElementById('nav-signed-in').style.display = 'flex';
   document.getElementById('auth-panel').style.display = 'none';
   document.getElementById('dashboard-panel').style.display = 'block';
-  document.getElementById('dash-lede').textContent = `Signed in as ${session.user.email}.`;
-
-  renderStrava(); // independent of the plan — don't block the plan render on it
 
   const loadingEl = document.getElementById('plan-loading');
   const slowEl = document.getElementById('plan-loading-slow');
   loadingEl.style.display = 'block';
-  // Render's free tier sleeps after ~15min idle; say so rather than looking hung.
   const slowTimer = setTimeout(() => { slowEl.style.display = 'block'; }, 4000);
 
-  let profile = null, plan = [];
-  try {
-    profile = await apiFetch('/api/profile');
-    plan = await apiFetch('/api/plan');
-  } catch (err) {
-    clearTimeout(slowTimer);
-    loadingEl.style.display = 'none';
-    showMsg(document.getElementById('plan-sessions'), `Couldn't load your plan: ${err.message}`, 'error');
-    return;
-  } finally {
-    clearTimeout(slowTimer);
-    loadingEl.style.display = 'none';
-    slowEl.style.display = 'none';
-  }
+  const ok = await loadPlan();
+  clearTimeout(slowTimer);
+  slowEl.style.display = 'none';
+  if (ok) loadingEl.style.display = 'none';
 
-  if (!profile || plan.length === 0) {
-    document.getElementById('no-plan-card').style.display = 'block';
-    return;
-  }
-  document.getElementById('no-plan-card').style.display = 'none';
-
-  document.getElementById('dash-title').textContent = profile.race_name ? `Training for ${profile.race_name}` : 'Your plan';
-  document.getElementById('plan-summary-card').style.display = 'block';
-  document.getElementById('stat-race').textContent = profile.race_name || '—';
-  document.getElementById('stat-date').textContent = fmtDate(profile.race_date);
-  document.getElementById('stat-target').textContent = profile.target_time || '—';
-  document.getElementById('stat-weeks').textContent = profile.total_weeks ? `${profile.total_weeks} weeks` : '—';
-
-  const byWeek = new Map();
-  plan.forEach((s) => {
-    if (!byWeek.has(s.week)) byWeek.set(s.week, []);
-    byWeek.get(s.week).push(s);
-  });
-
-  const container = document.getElementById('plan-sessions');
-  container.innerHTML = '';
-
-  // A 12-week plan is fine fully expanded; a 37-week one is an unusable wall of
-  // scroll. Open the current week (plus the one either side) and fold the rest
-  // behind a summary the user can click.
-  const thisWeek = currentWeekOf(plan);
-  const weeks = [...byWeek.keys()].sort((a, b) => a - b);
-  const expandAll = weeks.length <= 4;
-
-  weeks.forEach((week) => {
-    const sessions = byWeek.get(week);
-    const headline = sessions.find((s) => s.week_headline)?.week_headline;
-    const logged = sessions.filter((s) => s.status).length;
-
-    const block = document.createElement('details');
-    block.className = 'week-block card';
-    block.open = expandAll || Math.abs(week - thisWeek) <= 1;
-
-    const summary = document.createElement('summary');
-    const h3 = document.createElement('h3');
-    h3.textContent = `Week ${week}`;
-    if (week === thisWeek) {
-      const now = document.createElement('span');
-      now.className = 'week-now';
-      now.textContent = 'This week';
-      h3.appendChild(now);
-    }
-    summary.appendChild(h3);
-    const meta = document.createElement('div');
-    meta.className = 'headline';
-    meta.textContent = [headline, `${sessions.length} sessions`, logged ? `${logged} logged` : null]
-      .filter(Boolean).join(' · ');
-    summary.appendChild(meta);
-    block.appendChild(summary);
-
-    sessions.forEach((s) => {
-      const row = document.createElement('div');
-      row.className = 'session-row';
-
-      const day = document.createElement('div');
-      day.className = 'day';
-      day.textContent = DAY_LABEL[s.day] || s.day;
-      const dateSpan = document.createElement('span');
-      dateSpan.className = 'd';
-      dateSpan.textContent = fmtDate(s.date);
-      day.appendChild(dateSpan);
-
-      const body = document.createElement('div');
-      body.className = 'body';
-      const title = document.createElement('div');
-      title.className = 'title';
-      title.textContent = s.title;
-      const targets = document.createElement('div');
-      targets.className = 'targets';
-      targets.textContent = s.targets || '';
-      body.append(title, targets);
-
-      // Built with textContent rather than innerHTML throughout: this content
-      // comes from a user's uploaded plan file, so an apostrophe or a stray
-      // angle bracket in a session title must never be able to break the page.
-      const btns = document.createElement('div');
-      btns.className = 'status-btns';
-      [['hit', 'Hit'], ['niggle', 'Niggle'], ['miss', 'Miss']].forEach(([status, label]) => {
-        const b = document.createElement('button');
-        b.className = status + (s.status === status ? ' active' : '');
-        b.textContent = label;
-        b.dataset.week = s.week;
-        b.dataset.day = s.day;
-        b.dataset.status = status;
-        btns.appendChild(b);
-      });
-
-      row.append(day, body, btns);
-      block.appendChild(row);
-    });
-    container.appendChild(block);
-  });
-
-  container.querySelectorAll('.status-btns button').forEach((btn) => {
-    btn.addEventListener('click', async () => {
-      const { week, day, status } = btn.dataset;
-      const siblings = btn.parentElement.querySelectorAll('button');
-      siblings.forEach((b) => { b.disabled = true; });
-      try {
-        await apiFetch('/api/sessions', { method: 'POST', body: JSON.stringify({ week: Number(week), day, status }) });
-        renderDashboard();
-      } catch (err) {
-        showMsg(document.getElementById('plan-sessions'), `Couldn't save that: ${err.message}`, 'error');
-        siblings.forEach((b) => { b.disabled = false; });
-      }
-    });
-  });
+  renderStrava(); // independent — never blocks or breaks the plan view
 }
 
 /* ---------- Strava ---------- */
 async function renderStrava() {
+  const section = document.getElementById('strava-section');
   const card = document.getElementById('strava-card');
   const statusEl = document.getElementById('strava-status');
+  const blurbEl = document.getElementById('strava-blurb');
   const actionsEl = document.getElementById('strava-actions');
   const recentEl = document.getElementById('strava-recent');
   const msgEl = document.getElementById('strava-msg');
+  const heroStat = document.getElementById('stat-strava');
 
   let status;
   try {
     status = await apiFetch('/api/strava/status');
   } catch {
-    return; // Strava is a bonus — never let it break the plan view
+    return; // a bonus feature — never let it break the plan view
   }
+  state.strava = status;
 
-  // Hidden entirely until the server has Strava credentials configured, so
-  // friends don't see a button that can't work.
-  if (!status.configured) return;
+  // Stays hidden entirely until the server has Strava credentials, so nobody
+  // sees a button that can't work.
+  if (!status.configured) {
+    if (heroStat) heroStat.textContent = '–';
+    return;
+  }
+  section.style.display = 'flex';
   card.style.display = 'block';
   actionsEl.innerHTML = '';
   recentEl.innerHTML = '';
   msgEl.innerHTML = '';
 
   if (!status.connected) {
-    statusEl.textContent = 'Not connected — link your Strava to pull your runs in automatically.';
+    statusEl.textContent = 'not connected';
+    if (heroStat) heroStat.textContent = 'Not connected';
+    blurbEl.textContent = 'Link your Strava account to pull your runs in automatically.';
     const connect = document.createElement('button');
-    connect.className = 'btn small';
+    connect.className = 'btn primary';
     connect.textContent = 'Connect Strava';
     connect.addEventListener('click', async () => {
       connect.disabled = true;
       connect.textContent = 'Opening Strava…';
       try {
-        const state = crypto.randomUUID();
-        sessionStorage.setItem('strava_oauth_state', state);
+        const st = crypto.randomUUID();
+        sessionStorage.setItem('strava_oauth_state', st);
         const redirectUri = new URL('./strava-callback.html', window.location.href).toString();
         const { url } = await apiFetch(
-          `/api/strava/auth-url?redirect_uri=${encodeURIComponent(redirectUri)}&state=${encodeURIComponent(state)}`
+          `/api/strava/auth-url?redirect_uri=${encodeURIComponent(redirectUri)}&state=${encodeURIComponent(st)}`
         );
         window.location.href = url;
       } catch (err) {
@@ -426,12 +737,14 @@ async function renderStrava() {
   }
 
   const last = status.integration?.last_synced_at;
-  statusEl.textContent = last
-    ? `Connected — last synced ${new Date(last).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}.`
+  statusEl.textContent = 'connected';
+  if (heroStat) heroStat.textContent = 'Connected';
+  blurbEl.textContent = last
+    ? `Last synced ${new Date(last).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}.`
     : 'Connected — not synced yet.';
 
   const syncBtn = document.createElement('button');
-  syncBtn.className = 'btn secondary small';
+  syncBtn.className = 'btn';
   syncBtn.textContent = 'Sync now';
   syncBtn.addEventListener('click', async () => {
     syncBtn.disabled = true;
@@ -448,7 +761,7 @@ async function renderStrava() {
   });
 
   const disconnectBtn = document.createElement('button');
-  disconnectBtn.className = 'btn secondary small';
+  disconnectBtn.className = 'btn';
   disconnectBtn.textContent = 'Disconnect';
   disconnectBtn.addEventListener('click', async () => {
     if (!confirm('Disconnect Strava? Runs already pulled in stay on your account — this just stops future syncing.')) return;
@@ -469,7 +782,7 @@ async function renderStrava() {
     if (!acts.length) return;
     const heading = document.createElement('div');
     heading.className = 'hint';
-    heading.style.margin = '16px 0 6px';
+    heading.style.margin = '18px 0 4px';
     heading.textContent = 'Recent runs';
     recentEl.appendChild(heading);
     acts.slice(0, 5).forEach((a) => {
@@ -477,7 +790,7 @@ async function renderStrava() {
       row.className = 'stat-row';
       const k = document.createElement('div');
       k.className = 'k';
-      k.textContent = `${fmtDate(a.activity_date)} · ${a.title}`;
+      k.textContent = `${fmtUK(a.activity_date)} · ${a.title}`;
       const v = document.createElement('div');
       v.className = 'v';
       v.textContent = `${a.distance_km}km${a.pace ? ` · ${a.pace}/km` : ''}`;
@@ -485,7 +798,7 @@ async function renderStrava() {
       recentEl.appendChild(row);
     });
   } catch {
-    // recent-runs list is decorative; a failure here shouldn't surface
+    // decorative — a failure here shouldn't surface
   }
 }
 
