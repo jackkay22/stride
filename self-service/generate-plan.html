@@ -20,7 +20,7 @@
     <nav>
       <a href="./index.html">Dashboard</a>
       <a href="./upload.html">Upload plan</a>
-      <button id="btn-sign-out">Sign out</button>
+      <button class="link" id="btn-sign-out">Sign out</button>
     </nav>
   </header>
 
@@ -67,7 +67,7 @@
       <textarea id="other_notes" placeholder="e.g. previous race times, strength training habits, upcoming travel"></textarea>
 
       <div style="margin-top:20px;">
-        <button type="submit" class="btn">Build my prompt</button>
+        <button type="submit" class="btn primary">Build my prompt</button>
       </div>
     </form>
   </div>
@@ -75,7 +75,7 @@
   <div class="card" id="output-card" style="display:none;">
     <div class="row between">
       <label style="margin:0;">Your prompt — copy this into Claude</label>
-      <button class="btn secondary small" id="btn-copy">Copy</button>
+      <button class="btn small" id="btn-copy">Copy</button>
     </div>
     <textarea class="json" id="prompt-output" readonly></textarea>
     <div class="hint">
