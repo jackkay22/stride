@@ -89,6 +89,18 @@
       </div>
     </div>
 
+    <div id="strava-card" class="card" style="display:none;">
+      <div class="row between">
+        <div>
+          <div style="font-size:14px; color:var(--title); font-weight:600;">Strava</div>
+          <div class="hint" id="strava-status" style="margin-top:3px;">Checking…</div>
+        </div>
+        <div class="row" id="strava-actions"></div>
+      </div>
+      <div id="strava-msg"></div>
+      <div id="strava-recent"></div>
+    </div>
+
     <div id="plan-loading" class="card" style="display:none;">
       <p style="margin:0; color:var(--muted); font-size:14px;">Loading your plan…</p>
       <p class="hint" id="plan-loading-slow" style="display:none; margin-top:8px;">
@@ -227,6 +239,8 @@ async function renderDashboard() {
   document.getElementById('dashboard-panel').style.display = 'block';
   document.getElementById('dash-lede').textContent = `Signed in as ${session.user.email}.`;
 
+  renderStrava(); // independent of the plan — don't block the plan render on it
+
   const loadingEl = document.getElementById('plan-loading');
   const slowEl = document.getElementById('plan-loading-slow');
   loadingEl.style.display = 'block';
@@ -360,6 +374,119 @@ async function renderDashboard() {
       }
     });
   });
+}
+
+/* ---------- Strava ---------- */
+async function renderStrava() {
+  const card = document.getElementById('strava-card');
+  const statusEl = document.getElementById('strava-status');
+  const actionsEl = document.getElementById('strava-actions');
+  const recentEl = document.getElementById('strava-recent');
+  const msgEl = document.getElementById('strava-msg');
+
+  let status;
+  try {
+    status = await apiFetch('/api/strava/status');
+  } catch {
+    return; // Strava is a bonus — never let it break the plan view
+  }
+
+  // Hidden entirely until the server has Strava credentials configured, so
+  // friends don't see a button that can't work.
+  if (!status.configured) return;
+  card.style.display = 'block';
+  actionsEl.innerHTML = '';
+  recentEl.innerHTML = '';
+  msgEl.innerHTML = '';
+
+  if (!status.connected) {
+    statusEl.textContent = 'Not connected — link your Strava to pull your runs in automatically.';
+    const connect = document.createElement('button');
+    connect.className = 'btn small';
+    connect.textContent = 'Connect Strava';
+    connect.addEventListener('click', async () => {
+      connect.disabled = true;
+      connect.textContent = 'Opening Strava…';
+      try {
+        const state = crypto.randomUUID();
+        sessionStorage.setItem('strava_oauth_state', state);
+        const redirectUri = new URL('./strava-callback.html', window.location.href).toString();
+        const { url } = await apiFetch(
+          `/api/strava/auth-url?redirect_uri=${encodeURIComponent(redirectUri)}&state=${encodeURIComponent(state)}`
+        );
+        window.location.href = url;
+      } catch (err) {
+        showMsg(msgEl, err.message, 'error');
+        connect.disabled = false;
+        connect.textContent = 'Connect Strava';
+      }
+    });
+    actionsEl.appendChild(connect);
+    return;
+  }
+
+  const last = status.integration?.last_synced_at;
+  statusEl.textContent = last
+    ? `Connected — last synced ${new Date(last).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}.`
+    : 'Connected — not synced yet.';
+
+  const syncBtn = document.createElement('button');
+  syncBtn.className = 'btn secondary small';
+  syncBtn.textContent = 'Sync now';
+  syncBtn.addEventListener('click', async () => {
+    syncBtn.disabled = true;
+    syncBtn.textContent = 'Syncing…';
+    try {
+      const r = await apiFetch('/api/strava/sync', { method: 'POST' });
+      showMsg(msgEl, `Synced — ${r.synced} recent ${r.synced === 1 ? 'run' : 'runs'}.`, 'ok');
+      renderStrava();
+    } catch (err) {
+      showMsg(msgEl, err.message, 'error');
+      syncBtn.disabled = false;
+      syncBtn.textContent = 'Sync now';
+    }
+  });
+
+  const disconnectBtn = document.createElement('button');
+  disconnectBtn.className = 'btn secondary small';
+  disconnectBtn.textContent = 'Disconnect';
+  disconnectBtn.addEventListener('click', async () => {
+    if (!confirm('Disconnect Strava? Runs already pulled in stay on your account — this just stops future syncing.')) return;
+    disconnectBtn.disabled = true;
+    try {
+      await apiFetch('/api/strava/disconnect', { method: 'POST' });
+      renderStrava();
+    } catch (err) {
+      showMsg(msgEl, err.message, 'error');
+      disconnectBtn.disabled = false;
+    }
+  });
+
+  actionsEl.append(syncBtn, disconnectBtn);
+
+  try {
+    const acts = await apiFetch('/api/strava/activities');
+    if (!acts.length) return;
+    const heading = document.createElement('div');
+    heading.className = 'hint';
+    heading.style.margin = '16px 0 6px';
+    heading.textContent = 'Recent runs';
+    recentEl.appendChild(heading);
+    acts.slice(0, 5).forEach((a) => {
+      const row = document.createElement('div');
+      row.className = 'stat-row';
+      const k = document.createElement('div');
+      k.className = 'k';
+      k.textContent = `${fmtDate(a.activity_date)} · ${a.title}`;
+      const v = document.createElement('div');
+      v.className = 'v';
+      v.textContent = `${a.distance_km}km${a.pace ? ` · ${a.pace}/km` : ''}`;
+      row.append(k, v);
+      recentEl.appendChild(row);
+    });
+  } catch {
+    // recent-runs list is decorative; a failure here shouldn't surface
+  }
 }
 
 (async () => {

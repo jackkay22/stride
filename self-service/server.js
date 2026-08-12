@@ -28,6 +28,8 @@ app.use(express.json({ limit: '2mb' })); // a full plan's JSON is small, but gen
 
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY;
+const STRAVA_CLIENT_ID = process.env.STRAVA_CLIENT_ID;
+const STRAVA_CLIENT_SECRET = process.env.STRAVA_CLIENT_SECRET;
 const PORT = process.env.PORT || 3001;
 
 if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
@@ -258,6 +260,202 @@ app.get('/api/change-log', requireUser, asyncRoute(async (req, res) => {
   if (error) return res.status(500).json({ error: error.message });
   res.json(data);
 }));
+
+/* ============================================================
+   STRAVA — per-user connection.
+
+   Deliberately different from the personal app's flow. There, Strava
+   redirects straight back to the backend, which is fine for one known user.
+   Here the redirect goes to a page in the frontend (strava-callback.html),
+   which still holds the signed-in Supabase session and posts the code here
+   as a normal authenticated request. That way the backend always knows who
+   it is acting for and never needs the service-role key to work it out.
+
+   Sync happens while the user is signed in and using the app, not on a
+   schedule — a cron has no user, so it would need that same privileged key.
+   ============================================================ */
+
+const stravaConfigured = () => Boolean(STRAVA_CLIENT_ID && STRAVA_CLIENT_SECRET);
+
+// Where to send someone to authorise. The frontend asks for this rather than
+// hardcoding the client id, so the id lives in one place (Render's env).
+app.get('/api/strava/auth-url', requireUser, asyncRoute(async (req, res) => {
+  if (!stravaConfigured()) {
+    return res.status(503).json({ error: 'Strava isn\'t set up on this server yet.' });
+  }
+  const { redirect_uri, state } = req.query;
+  if (!redirect_uri || !state) {
+    return res.status(400).json({ error: 'redirect_uri and state are required.' });
+  }
+  const url =
+    `https://www.strava.com/oauth/authorize?client_id=${encodeURIComponent(STRAVA_CLIENT_ID)}` +
+    `&response_type=code&redirect_uri=${encodeURIComponent(redirect_uri)}` +
+    `&approval_prompt=auto&scope=activity:read_all&state=${encodeURIComponent(state)}`;
+  res.json({ url });
+}));
+
+// Called by strava-callback.html with the code Strava handed it.
+app.post('/api/strava/connect', requireUser, asyncRoute(async (req, res) => {
+  if (!stravaConfigured()) {
+    return res.status(503).json({ error: 'Strava isn\'t set up on this server yet.' });
+  }
+  const { code, redirect_uri } = req.body;
+  if (!code) return res.status(400).json({ error: 'Missing the authorisation code from Strava.' });
+
+  const tokenRes = await fetch('https://www.strava.com/oauth/token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      client_id: STRAVA_CLIENT_ID,
+      client_secret: STRAVA_CLIENT_SECRET,
+      code,
+      grant_type: 'authorization_code',
+      ...(redirect_uri ? { redirect_uri } : {}),
+    }),
+  });
+  const tokens = await tokenRes.json();
+  if (!tokenRes.ok || !tokens.access_token) {
+    return res.status(400).json({
+      error: `Strava wouldn't complete the connection: ${tokens.message || tokenRes.statusText}`,
+    });
+  }
+
+  const { error } = await req.supabase.from('su_integrations').upsert({
+    user_id: req.user.id,
+    provider: 'strava',
+    access_token: tokens.access_token,
+    refresh_token: tokens.refresh_token,
+    expires_at: new Date(tokens.expires_at * 1000).toISOString(),
+    athlete_id: tokens.athlete?.id ?? null,
+    connected_at: new Date().toISOString(),
+  });
+  if (error) return res.status(500).json({ error: `Couldn't save the connection: ${error.message}` });
+
+  const synced = await syncStravaForUser(req.supabase, req.user.id);
+  res.json({ ok: true, connected: true, ...synced });
+}));
+
+app.get('/api/strava/status', requireUser, asyncRoute(async (req, res) => {
+  const { data, error } = await req.supabase
+    .from('su_integrations')
+    .select('provider, connected_at, last_synced_at, athlete_id')
+    .eq('user_id', req.user.id)
+    .eq('provider', 'strava')
+    .maybeSingle();
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ configured: stravaConfigured(), connected: Boolean(data), integration: data || null });
+}));
+
+app.post('/api/strava/disconnect', requireUser, asyncRoute(async (req, res) => {
+  const { error } = await req.supabase
+    .from('su_integrations')
+    .delete()
+    .eq('user_id', req.user.id)
+    .eq('provider', 'strava');
+  if (error) return res.status(500).json({ error: error.message });
+  // Activities already pulled in are left alone deliberately — disconnecting
+  // stops future syncing, it doesn't erase training history already recorded.
+  res.json({ ok: true, connected: false });
+}));
+
+app.post('/api/strava/sync', requireUser, asyncRoute(async (req, res) => {
+  const result = await syncStravaForUser(req.supabase, req.user.id);
+  if (result.error) return res.status(400).json({ error: result.error });
+  res.json({ ok: true, ...result });
+}));
+
+app.get('/api/strava/activities', requireUser, asyncRoute(async (req, res) => {
+  const { data, error } = await req.supabase
+    .from('su_strava_activities')
+    .select('*')
+    .eq('user_id', req.user.id)
+    .order('activity_date', { ascending: false })
+    .limit(60);
+  if (error) return res.status(500).json({ error: error.message });
+  res.json(data);
+}));
+
+// Strava access tokens last ~6 hours. Refresh when expired, and persist the
+// new pair so the next sync doesn't have to.
+async function freshStravaToken(supabase, userId, integ) {
+  if (integ.expires_at && new Date(integ.expires_at) > new Date()) return integ.access_token;
+
+  const res = await fetch('https://www.strava.com/oauth/token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      client_id: STRAVA_CLIENT_ID,
+      client_secret: STRAVA_CLIENT_SECRET,
+      grant_type: 'refresh_token',
+      refresh_token: integ.refresh_token,
+    }),
+  });
+  const tokens = await res.json();
+  if (!res.ok || !tokens.access_token) return null;
+
+  await supabase.from('su_integrations').update({
+    access_token: tokens.access_token,
+    refresh_token: tokens.refresh_token,
+    expires_at: new Date(tokens.expires_at * 1000).toISOString(),
+  }).eq('user_id', userId).eq('provider', 'strava');
+
+  return tokens.access_token;
+}
+
+async function syncStravaForUser(supabase, userId) {
+  if (!stravaConfigured()) return { error: 'Strava isn\'t set up on this server yet.' };
+
+  const { data: integ } = await supabase
+    .from('su_integrations')
+    .select('*')
+    .eq('user_id', userId)
+    .eq('provider', 'strava')
+    .maybeSingle();
+  if (!integ) return { error: 'Strava isn\'t connected to your account.' };
+
+  const accessToken = await freshStravaToken(supabase, userId, integ);
+  if (!accessToken) {
+    return { error: 'Your Strava connection has expired — disconnect and connect it again.' };
+  }
+
+  const actRes = await fetch('https://www.strava.com/api/v3/athlete/activities?per_page=30', {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+  if (!actRes.ok) return { error: `Strava wouldn't return your activities (${actRes.status}).` };
+  const activities = await actRes.json();
+
+  const rows = (Array.isArray(activities) ? activities : [])
+    .filter((a) => a.type === 'Run' && a.distance > 0 && a.moving_time > 0)
+    .map((a) => {
+      const paceMinPerKm = a.moving_time / 60 / (a.distance / 1000);
+      const pm = Math.floor(paceMinPerKm);
+      const ps = Math.round((paceMinPerKm - pm) * 60);
+      return {
+        user_id: userId,
+        strava_id: a.id,
+        activity_date: a.start_date_local.slice(0, 10),
+        distance_km: Math.round((a.distance / 1000) * 100) / 100,
+        moving_time_seconds: a.moving_time,
+        pace: `${pm}:${String(ps).padStart(2, '0')}`,
+        avg_hr: a.average_heartrate ?? null,
+        title: a.name,
+        activity_type: a.type,
+      };
+    });
+
+  if (rows.length) {
+    const { error } = await supabase
+      .from('su_strava_activities')
+      .upsert(rows, { onConflict: 'user_id,strava_id' });
+    if (error) return { error: `Couldn't save your activities: ${error.message}` };
+  }
+
+  await supabase.from('su_integrations')
+    .update({ last_synced_at: new Date().toISOString() })
+    .eq('user_id', userId).eq('provider', 'strava');
+
+  return { synced: rows.length };
+}
 
 app.get('/api/meta', (_req, res) => res.json({ valid_session_types: VALID_SESSION_TYPES }));
 

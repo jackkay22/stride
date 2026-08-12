@@ -12,7 +12,8 @@ Jack's personal app (`../index.html`, `stride-lrdq.onrender.com`) is untouched b
 | Plan generation | Manual, via a conversation Jack has with Claude on their behalf (see the parked `stride-plan-upload-brief.md` work) | Each person has their own conversation with Claude, using the [prompt template](generate-plan.html) here — their account, their usage, nothing routed through Jack |
 | Auth | None (a client-side passcode gate, not real security) | Supabase Auth — real per-user accounts |
 | Data | One 12-week block, hardcoded dates | However many plans, one per account, isolated by database-level row security |
-| Strava/Whoop sync | Yes | No — later, separately-scoped work |
+| Strava sync | Yes — Jack's own account, 3-hourly cron | Yes — each person connects their own, synced while they're using the app |
+| Whoop sync | Yes | No — later, separately-scoped work |
 
 ## Architecture decision — separate deployment (flagging this, per the brief)
 
@@ -61,6 +62,12 @@ to that user, regardless of what the backend code does or forgets to do. This is
 guarantee than "the backend remembers to add `WHERE user_id = ...` everywhere" — it's enforced
 one layer down, in Postgres.
 
+That constraint is why two things are shaped the way they are. Strava's OAuth redirect goes to
+a page in this app rather than to the backend, so the request that completes the connection
+still carries the user's session. And Strava syncing happens while someone is using the app
+rather than on a schedule, because a cron job has no signed-in user to act as. Both are
+deliberate trade-offs to avoid ever needing the service-role key.
+
 ## What's here
 
 | File | What it does |
@@ -69,6 +76,7 @@ one layer down, in Postgres.
 | `generate-plan.html` | Guided form → builds the copy-pasteable prompt for your own Claude conversation. |
 | `upload.html` | Paste or upload the plan JSON Claude produces; validates it and imports it. |
 | `reset-password.html` | Handles the "forgot password" email link. |
+| `strava-callback.html` | Where Strava sends people back after they authorise. Hands the code to the backend as an authenticated request — see the Strava note in `server.js` for why the redirect lands here rather than on the backend. |
 | `config.js` | The three non-secret values (Supabase URL, Supabase anon key, backend URL) — edit directly on GitHub after deploying, same pattern as `../passcode.js`. |
 | `app.js`, `style.css` | Shared Supabase client/auth helpers and look, used by every page above. |
 | `plan-schema.js` | The JSON shape an uploaded plan must match, and the validator. Mirrors the columns `../plan_sessions` already uses — see the comment at the top of the file for why it's defined fresh here rather than reused from elsewhere. |
@@ -155,6 +163,39 @@ window.STRIDE_SS_CONFIG = {
 
 Commit. A minute or two later, `https://jackkay22.github.io/stride/self-service/` is live.
 
+### 5. Optional: let people connect their own Strava (~5 min)
+
+Skip this and everything else still works — the Strava section stays hidden until the two
+variables below are set, so nobody sees a button that can't do anything.
+
+This needs its **own Strava API app**, separate from the personal app's. Strava allows one
+callback domain per app, and the personal app's is already pointed at its own Render service.
+Same Strava account, second app:
+
+1. Go to <https://www.strava.com/settings/api> → create a new app
+2. **Authorization Callback Domain:** `jackkay22.github.io`
+   (just the domain — no `https://`, no path. The redirect lands on the app's own
+   `strava-callback.html` page, not on the backend, so this is the right domain.)
+3. Copy the **Client ID** and **Client Secret**
+4. Render → your self-service service → **Environment** → add:
+
+   | Name | Value |
+   | --- | --- |
+   | `STRAVA_CLIENT_ID` | from step 3 |
+   | `STRAVA_CLIENT_SECRET` | from step 3 |
+
+5. Save — Render redeploys, and a **Connect Strava** panel appears on everyone's plan page
+
+Each person connects their own Strava account. Nobody's runs are visible to anyone else, and
+none of it touches the personal app's Strava connection.
+
+**Note on how syncing works:** runs are pulled in while someone is signed in and using the app
+— when they open it, and whenever they press **Sync now** — rather than on a background
+schedule. The personal app can sync on a 3-hour cron because it has one known user; a
+scheduled job here would have no signed-in user, so it would need Supabase's service-role key,
+which this app is deliberately built never to use. The practical difference: if someone doesn't
+open the app for a week, their runs appear the moment they next do.
+
 ### Checking it works
 
 Open that URL, create an account, and try the full loop: **Generate plan** → copy the prompt
@@ -168,12 +209,13 @@ an idle service after ~15 minutes and takes 30–60 seconds to wake back up.
 
 **Can:** sign up, generate a plan via their own Claude conversation, upload it, see their own
 plan, mark sessions hit/niggle/miss, replace their plan with a new upload, reset a forgotten
-password.
+password, and — once step 5 is done — connect their own Strava account and see their recent
+runs alongside the plan.
 
-**Can't:** see anyone else's plan or progress (enforced by the database, not just the UI),
-connect Strava/Whoop (not built yet — later, separately-scoped work), or generate a plan
-in-app without their own Claude conversation (also deliberately not built — see the top-level
-task notes on why).
+**Can't:** see anyone else's plan, progress, or runs (enforced by the database, not just the
+UI), connect Whoop (not built yet — later, separately-scoped work), or generate a plan in-app
+without their own Claude conversation (also deliberately not built — see the top-level task
+notes on why).
 
 ## Local testing (optional, before deploying)
 

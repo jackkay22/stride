@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Stride — Connecting Strava</title>
+<meta name="robots" content="noindex" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Petrona:ital,wght@0,400;0,500;0,600;0,700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="./style.css" />
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="brand">
+      <div class="logo-mark">S</div>
+      <h1>Stride <span class="tag">Self-Service</span></h1>
+    </div>
+  </header>
+
+  <h2 class="page-title">Connecting Strava</h2>
+  <p class="lede" id="status-line">Finishing the connection…</p>
+
+  <div class="card">
+    <div id="callback-msg"></div>
+    <div class="row" id="callback-actions" style="display:none;">
+      <a class="btn" href="./index.html">Back to your plan</a>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<!-- Cache-busted the same way passcode.js is — see index.html for why. -->
+<script>document.write('<scr' + 'ipt src="./config.js?v=' + Date.now() + '"></scr' + 'ipt>');</script>
+<script src="./app.js"></script>
+<script>
+const msgEl = document.getElementById('callback-msg');
+const statusLine = document.getElementById('status-line');
+
+function showMsg(text, kind) {
+  msgEl.innerHTML = '';
+  if (!text) return;
+  const div = document.createElement('div');
+  div.className = `msg ${kind}`;
+  div.textContent = text;
+  msgEl.appendChild(div);
+}
+
+function done(text, kind) {
+  statusLine.textContent = kind === 'ok' ? 'All set.' : 'That didn\'t work.';
+  showMsg(text, kind);
+  document.getElementById('callback-actions').style.display = 'flex';
+}
+
+(async () => {
+  const session = await requireSession();
+  if (!session) return; // requireSession has already redirected to sign-in
+
+  const params = new URLSearchParams(window.location.search);
+  const code = params.get('code');
+  const state = params.get('state');
+  const error = params.get('error');
+  const scope = params.get('scope') || '';
+
+  // Strava sends ?error=access_denied when someone clicks Cancel on its
+  // authorise screen — not a failure worth alarming language.
+  if (error) {
+    return done('Strava wasn\'t connected — the authorisation was cancelled. You can try again any time.', 'info');
+  }
+  if (!code) {
+    return done('This page is only reachable via Strava. Start from the Connect Strava button on your plan.', 'info');
+  }
+
+  // CSRF check: the value we generated before sending the user to Strava.
+  const expected = sessionStorage.getItem('strava_oauth_state');
+  sessionStorage.removeItem('strava_oauth_state');
+  if (!expected || state !== expected) {
+    return done('Couldn\'t verify that this connection request came from you. Start again from the Connect Strava button.', 'error');
+  }
+
+  // Strava lets people untick permissions on the authorise screen. Without
+  // activity:read we can see the account but none of its runs.
+  if (!scope.includes('activity:read')) {
+    return done('Strava was connected, but without permission to read your activities — so nothing can sync. Connect again and leave the activity permission ticked.', 'error');
+  }
+
+  try {
+    const redirectUri = new URL('./strava-callback.html', window.location.href).toString();
+    const result = await apiFetch('/api/strava/connect', {
+      method: 'POST',
+      body: JSON.stringify({ code, redirect_uri: redirectUri }),
+    });
+    const n = result.synced ?? 0;
+    done(
+      `Strava connected. ${n === 0 ? 'No recent runs found yet — they\'ll appear as you log them.' : `${n} recent ${n === 1 ? 'run' : 'runs'} pulled in.`}`,
+      'ok'
+    );
+    setTimeout(() => { window.location.href = './index.html'; }, 2500);
+  } catch (err) {
+    done(err.message, 'error');
+  }
+})();
+</script>
+</body>
+</html>
