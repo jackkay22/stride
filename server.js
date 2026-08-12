@@ -5,7 +5,7 @@ import dotenv from 'dotenv';
 import cron from 'node-cron';
 import { createClient } from '@supabase/supabase-js';
 import { createMcpRouter } from './mcp-server.js';
-import { getPlan, getChangeLog, updateSession, rescheduleSession, PlanError } from './plan-service.js';
+import { getPlan, getChangeLog, updateSession, rescheduleSession, applyQuickAction, PlanError } from './plan-service.js';
 
 dotenv.config();
 
@@ -345,6 +345,33 @@ app.post('/api/plan/reschedule-session', requireApiKey, async (req, res) => {
     });
     // 409 = "I need you to confirm this first", not a failure.
     res.status(result.needs_confirmation ? 409 : 200).json(result);
+  } catch (err) {
+    handleError(err, res);
+  }
+});
+
+/* ============================================================
+   APP WRITES — same plan-service functions as above, called from Stride's own
+   UI (the drag-and-drop calendar and the Coach Jack quick actions) rather than
+   from Claude. No API key: the app already sits behind the passcode gate, and
+   these follow the same open-write pattern as the older /api/sessions endpoint.
+   ============================================================ */
+
+app.post('/api/app/reschedule-session', async (req, res) => {
+  try {
+    const { from_date, from_type, to_date, session_type, confirm, reason } = req.body;
+    const result = await rescheduleSession(supabase, {
+      from_date, from_type, to_date, session_type, confirm, reason, source: 'app'
+    });
+    res.status(result.needs_confirmation ? 409 : 200).json(result);
+  } catch (err) {
+    handleError(err, res);
+  }
+});
+
+app.post('/api/app/quick-action', async (req, res) => {
+  try {
+    res.json(await applyQuickAction(supabase, { ...req.body, source: 'app' }));
   } catch (err) {
     handleError(err, res);
   }

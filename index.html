@@ -259,6 +259,124 @@
   ol.rules-list{margin:0; padding-left:20px; font-size:13.5px; color:var(--muted); line-height:1.9;}
   ol.rules-list b{color:var(--text);}
   .gate-table td:first-child{font-size:12px; color:var(--muted);}
+
+  /* ============================================================
+     BOTTOM TAB NAVIGATION — replaces the old top nav.tabs as the app's
+     primary navigation, so switching views feels like a native app rather
+     than a webpage. Fixed, blurred, safe-area aware for notched phones.
+     ============================================================ */
+  .wrap{padding-bottom:104px;}
+  @media (max-width:640px){ .wrap{padding-bottom:96px;} }
+  nav.bottomtabs{position:fixed; left:0; right:0; bottom:0; z-index:80; display:flex;
+    background:rgba(10,15,26,0.86); backdrop-filter:blur(20px); border-top:1px solid var(--line);
+    padding:6px 6px calc(6px + env(safe-area-inset-bottom, 0px));
+    box-shadow:0 -8px 24px rgba(0,0,0,0.35);}
+  nav.bottomtabs button{flex:1; background:none; border:none; color:var(--dim-2); font-family:var(--sans);
+    display:flex; flex-direction:column; align-items:center; gap:3px; padding:8px 4px 6px; cursor:pointer;
+    border-radius:14px; transition:color .15s ease, background .15s ease;}
+  nav.bottomtabs button svg{width:22px; height:22px;}
+  nav.bottomtabs button span{font-size:10.5px; font-weight:700; letter-spacing:0.02em;}
+  nav.bottomtabs button.active{color:var(--blue);}
+  nav.bottomtabs button.active svg{filter:drop-shadow(0 0 8px rgba(111,159,242,0.5));}
+  nav.bottomtabs button:active{background:rgba(255,255,255,0.05);}
+
+  /* secondary in-page tabs, used inside the Stats view to reach Fitness / Zones /
+     Predictor / Strava without giving each its own place in the bottom bar */
+  nav.subnav{display:flex; gap:6px; margin-bottom:22px; overflow-x:auto; padding-bottom:2px;}
+  nav.subnav button{background:var(--panel); border:1px solid var(--line); color:var(--muted);
+    font-family:var(--sans); font-weight:700; font-size:12px; padding:8px 15px; border-radius:999px;
+    cursor:pointer; white-space:nowrap; transition:all .15s ease;}
+  nav.subnav button.active{color:#0a1120; background:linear-gradient(90deg, var(--blue-deep), var(--blue)); border-color:transparent;}
+  nav.subnav button:hover:not(.active){border-color:var(--line-2); color:var(--text);}
+  .subview{display:none;} .subview.active{display:block;}
+
+  /* ---- Today view: one session, front and centre ---- */
+  .today-strip{display:flex; align-items:center; justify-content:space-between; margin-bottom:22px; color:var(--muted); font-size:13px;}
+  .today-strip b{color:var(--heading); font-family:var(--serif); font-size:15px; font-weight:600;}
+  .today-hero{background:var(--panel); backdrop-filter:blur(14px); border:1px solid rgba(111,159,242,0.3); border-radius:24px;
+    padding:32px 28px; box-shadow:0 16px 40px rgba(61,111,214,0.16), var(--shadow); position:relative; overflow:hidden;}
+  .today-hero::before{content:''; position:absolute; top:-40%; right:-20%; width:60%; height:120%;
+    background:radial-gradient(circle, rgba(111,159,242,0.14) 0%, transparent 70%); pointer-events:none;}
+  .today-eyebrow{color:var(--blue); font-size:12px; text-transform:uppercase; letter-spacing:0.14em; font-weight:700; margin-bottom:8px;}
+  .today-hero h2{font-family:var(--serif); font-weight:600; font-size:30px; margin:0 0 6px; color:var(--heading); letter-spacing:-0.01em;}
+  @media (max-width:560px){ .today-hero h2{font-size:25px;} }
+  .today-hero .meta{color:var(--muted); font-size:14px; margin-bottom:4px;}
+  .today-hero .targets{color:var(--muted-2); font-size:15px; margin-top:14px; line-height:1.6;}
+  .today-hero .type{font-size:10.5px; font-weight:700; letter-spacing:0.08em; text-transform:uppercase; color:var(--blue-soft);
+    background:rgba(111,159,242,0.14); border:1px solid rgba(111,159,242,0.3); padding:4px 11px; border-radius:999px; display:inline-block; margin-bottom:14px;}
+  .today-hero .detail{margin-top:16px; padding-top:16px; border-top:1px solid var(--line); color:var(--muted-2); font-size:13.5px; line-height:1.7; white-space:pre-line;}
+  .today-hero .moved{display:inline-block; margin-top:10px; font-size:10.5px; text-transform:uppercase; letter-spacing:0.06em; color:var(--blue); background:rgba(111,159,242,0.12); border:1px solid rgba(111,159,242,0.28); border-radius:999px; padding:2px 9px;}
+  .today-hero .exlist{margin:14px 0 0; padding-left:18px; color:var(--muted-2); font-size:13.5px; line-height:1.8;}
+  .today-empty{text-align:center; padding:40px 20px; color:var(--muted);}
+
+  /* ---- Coach Jack: chat-style quick actions (fixed presets, no AI) ---- */
+  .coach-panel{margin-top:32px;}
+  .coach-head{display:flex; align-items:center; gap:10px; margin-bottom:14px;}
+  .coach-avatar{width:32px; height:32px; border-radius:50%; background:linear-gradient(160deg,#1a2740,#101a2c);
+    border:1px solid rgba(111,159,242,0.35); display:flex; align-items:center; justify-content:center;
+    font-family:var(--serif); font-weight:700; font-size:12px; color:var(--blue-soft); flex-shrink:0;}
+  .coach-head .who{font-weight:700; font-size:13.5px; color:var(--heading);}
+  .coach-head .sub{font-size:11.5px; color:var(--dim);}
+  .chat-log{display:flex; flex-direction:column; gap:10px; margin-bottom:16px; max-height:340px; overflow-y:auto; padding-right:2px;}
+  .bubble{max-width:84%; padding:12px 15px; border-radius:16px; font-size:13.5px; line-height:1.55;}
+  .bubble.coach{align-self:flex-start; background:var(--panel-2); border:1px solid var(--line); color:var(--text); border-bottom-left-radius:5px;}
+  .bubble.user{align-self:flex-end; background:linear-gradient(90deg, var(--blue-deep), var(--blue)); color:#f3f7ff; border-bottom-right-radius:5px; font-weight:600;}
+  .bubble.system{align-self:center; color:var(--dim); font-size:11.5px; background:none; padding:2px 6px;}
+  .chip-row{display:flex; flex-wrap:wrap; gap:8px;}
+  .chip-btn{border:1px solid var(--line-2); background:var(--panel); color:var(--text); font-family:var(--sans);
+    font-size:12.5px; font-weight:600; padding:10px 16px; border-radius:999px; cursor:pointer; transition:all .12s ease; white-space:nowrap;}
+  .chip-btn:hover{border-color:var(--muted); background:rgba(255,255,255,0.06); transform:translateY(-1px);}
+  .chip-btn:disabled{opacity:0.45; pointer-events:none;}
+  .chip-btn.hit{border-color:rgba(111,174,140,0.35); color:var(--ok-text);}
+  .chip-btn.niggle{border-color:rgba(201,161,90,0.35); color:var(--amber-text);}
+  .chip-btn.miss{border-color:rgba(201,123,107,0.35); color:var(--miss-text);}
+  .chip-btn.special{border-color:rgba(111,159,242,0.35); color:var(--blue-soft);}
+  .holiday-form{display:none; margin-top:12px; background:var(--panel-2); border:1px solid var(--line); border-radius:14px; padding:14px;}
+  .holiday-form.open{display:block;}
+  .holiday-form .row{display:flex; gap:10px; align-items:flex-end; flex-wrap:wrap;}
+  .holiday-form label{display:block; font-size:10.5px; color:var(--muted); text-transform:uppercase; letter-spacing:0.06em; font-weight:700; margin-bottom:5px;}
+  .holiday-form input{background:rgba(0,0,0,0.25); border:1px solid var(--line-2); color:var(--text); padding:8px 10px; border-radius:8px; font-family:var(--sans); font-size:13px;}
+
+  /* ---- Plan view: drag-and-drop weekly calendar ---- */
+  .cal-grid{display:grid; grid-template-columns:repeat(7, minmax(118px, 1fr)); gap:8px; overflow-x:auto; padding-bottom:6px; margin-bottom:6px;}
+  @media (max-width:760px){ .cal-grid{grid-template-columns:repeat(7, minmax(112px, 1fr));} }
+  .cal-day{background:var(--panel); backdrop-filter:blur(10px); border:1px solid var(--line); border-radius:16px; padding:10px 8px; min-height:150px;
+    display:flex; flex-direction:column; gap:6px; transition:border-color .12s ease, background .12s ease;}
+  .cal-day.is-today{border-color:rgba(111,159,242,0.4); box-shadow:0 0 0 1px rgba(111,159,242,0.1);}
+  .cal-day.dragover{border-color:var(--blue); background:rgba(111,159,242,0.08);}
+  .cal-daylabel{font-size:10px; font-weight:700; letter-spacing:0.08em; text-transform:uppercase; color:var(--muted-3);}
+  .cal-date{font-size:10.5px; color:var(--dim); margin-bottom:2px; font-variant-numeric:tabular-nums;}
+  .cal-card{background:var(--panel-2); border:1px solid var(--line-2); border-radius:11px; padding:8px 9px; cursor:grab; touch-action:none;
+    user-select:none; -webkit-user-select:none; transition:transform .12s ease, box-shadow .12s ease, opacity .12s ease;}
+  .cal-card:active{cursor:grabbing;}
+  .cal-card.dragging{opacity:0.35;}
+  .cal-card .type{font-size:8.5px; font-weight:700; letter-spacing:0.06em; text-transform:uppercase; color:var(--muted-2);}
+  .cal-card .ttl{font-size:11.5px; font-weight:600; color:var(--title); margin-top:2px; line-height:1.3;}
+  .cal-card .tg{font-size:10px; color:var(--dim); margin-top:2px; line-height:1.3;}
+  .cal-card .stbar{height:3px; border-radius:2px; margin-top:6px; background:rgba(255,255,255,0.1);}
+  .cal-card.is-hit .stbar{background:var(--ok);} .cal-card.is-niggle .stbar{background:var(--amber);} .cal-card.is-miss .stbar{background:var(--miss);}
+  .cal-ghost{position:fixed; z-index:150; pointer-events:none; opacity:0.94; transform:translate(-50%,-50%) scale(1.04);
+    box-shadow:0 18px 40px rgba(0,0,0,0.5); border-radius:11px;}
+  .cal-hint{font-size:11.5px; color:var(--dim); margin:-2px 0 14px;}
+
+  /* ---- reschedule confirm sheet ---- */
+  .sheet-backdrop{position:fixed; inset:0; background:rgba(4,8,16,0.72); backdrop-filter:blur(4px); display:none;
+    align-items:flex-end; justify-content:center; z-index:160;}
+  .sheet-backdrop.open{display:flex;}
+  .sheet{background:#0e1626; border:1px solid var(--line-2); border-top-left-radius:22px; border-top-right-radius:22px;
+    max-width:520px; width:100%; padding:22px 24px calc(22px + env(safe-area-inset-bottom, 0px)); box-shadow:0 -20px 50px rgba(0,0,0,0.55);}
+  @media (min-width:640px){ .sheet-backdrop{align-items:center;} .sheet{border-radius:var(--r-card);} }
+  .sheet h3{font-family:var(--serif); font-weight:600; font-size:19px; margin:0 0 10px; color:var(--heading);}
+  .sheet ul{margin:0 0 18px; padding-left:18px; color:var(--amber-text); font-size:13px; line-height:1.7;}
+  .sheet .actions{display:flex; gap:10px;}
+  .sheet .actions .btn{flex:1; justify-content:center;}
+
+  /* ---- toast, used for quick logs made from the Plan-view calendar ---- */
+  .toast-wrap{position:fixed; left:0; right:0; bottom:calc(78px + env(safe-area-inset-bottom, 0px)); z-index:170;
+    display:flex; justify-content:center; pointer-events:none; padding:0 16px;}
+  .toast{background:#0e1626; border:1px solid var(--line-2); border-radius:999px; padding:10px 18px; font-size:13px;
+    color:var(--text); box-shadow:0 12px 28px rgba(0,0,0,0.4); opacity:0; transform:translateY(8px); transition:opacity .2s ease, transform .2s ease; max-width:92%;}
+  .toast.show{opacity:1; transform:translateY(0);}
 </style>
 </head>
 <body>
