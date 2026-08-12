@@ -7,6 +7,17 @@
 <meta name="description" content="Import and manage your own Claude-generated training plan." />
 <meta name="theme-color" content="#0a1120" />
 <meta name="robots" content="noindex" />
+<link rel="manifest" href="./manifest.webmanifest" />
+<!-- Brand assets are shared with the personal app one level up, so the logo
+     only ever needs changing in one place. -->
+<link rel="icon" href="../icons/favicon.svg" type="image/svg+xml" />
+<link rel="icon" href="../icons/favicon-32.png" sizes="32x32" type="image/png" />
+<link rel="icon" href="../icons/icon-192.png" sizes="192x192" type="image/png" />
+<link rel="apple-touch-icon" href="../icons/apple-touch-icon.png" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="Stride" />
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Petrona:ital,wght@0,400;0,500;0,600;0,700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -14,9 +25,19 @@
 </head>
 <body>
 <div class="wrap">
-  <header class="top">
+  <!-- On this page the whole header stays hidden until you're signed in: the
+       signed-out view carries the full lockup below, and two wordmarks a few
+       hundred pixels apart just read as a repeat (and an empty header would
+       leave a stray divider above the lockup). Every other page requires a
+       session, so their headers show unconditionally. -->
+  <header class="top" id="app-header" style="display:none;">
     <div class="brand">
-      <div class="logo-mark">S</div>
+      <div class="logo-mark" role="img" aria-label="Stride">
+        <!-- The Stride S — see brand/stride-mark.svg -->
+        <svg width="24" height="24" viewBox="0 0 48 48" fill="none" aria-hidden="true">
+          <path d="M34 16 A 9.5 9.5 0 1 0 24 24 A 9.5 9.5 0 1 1 14 32" stroke="#6f9ff2" stroke-width="4.6" stroke-linecap="round" fill="none"></path>
+        </svg>
+      </div>
       <h1>Stride <span class="tag">Self-Service</span></h1>
     </div>
     <nav id="nav-signed-in" style="display:none;">
@@ -28,6 +49,20 @@
 
   <!-- ============ SIGNED OUT: auth panel ============ -->
   <section id="auth-panel">
+    <!-- The full lockup — mark, spaced wordmark, tagline. This is the app's
+         first-impression moment, and the only place the tagline appears. -->
+    <div class="landing-lockup">
+      <div class="mark" role="img" aria-label="Stride">
+        <svg width="38" height="38" viewBox="0 0 48 48" fill="none" aria-hidden="true">
+          <path d="M34 16 A 9.5 9.5 0 1 0 24 24 A 9.5 9.5 0 1 1 14 32" stroke="#6f9ff2" stroke-width="4.6" stroke-linecap="round" fill="none"></path>
+        </svg>
+      </div>
+      <div>
+        <div class="wordmark">Stride</div>
+        <div class="tagline">Train · Adapt · Go Further</div>
+      </div>
+    </div>
+
     <h2 class="page-title">Your own training plan, your own account</h2>
     <p class="lede">
       Sign up, generate a plan in your own conversation with Claude using our prompt template,
@@ -661,6 +696,7 @@ async function loadPlan() {
 async function renderDashboard() {
   const session = await getSession();
   document.getElementById('nav-signed-in').style.display = 'flex';
+  document.getElementById('app-header').style.display = 'flex';
   document.getElementById('auth-panel').style.display = 'none';
   document.getElementById('dashboard-panel').style.display = 'block';
 

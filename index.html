@@ -7,6 +7,8 @@
 <meta name="description" content="12-week marathon build — sessions, fitness and pace zones." />
 <meta name="theme-color" content="#0a1120" />
 <link rel="manifest" href="./manifest.webmanifest" />
+<link rel="icon" href="./icons/favicon.svg" type="image/svg+xml" />
+<link rel="icon" href="./icons/favicon-32.png" sizes="32x32" type="image/png" />
 <link rel="icon" href="./icons/icon-192.png" sizes="192x192" type="image/png" />
 <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png" />
 <meta name="mobile-web-app-capable" content="yes" />
@@ -70,7 +72,10 @@
   header.top .brand .logo-mark{width:40px; height:40px; border-radius:12px; flex-shrink:0;
     background:linear-gradient(160deg, #1a2740 0%, #101a2c 100%); border:1px solid rgba(255,255,255,0.08);
     display:flex; align-items:center; justify-content:center; box-shadow:0 6px 16px rgba(0,0,0,0.4);}
-  header.top h1{font-family:var(--sans); font-weight:800; font-size:18px; margin:0; color:#f1f4fa; letter-spacing:0.06em; text-transform:uppercase;}
+  /* Wordmark: the spaced-letter treatment. The trailing letter-spacing adds a
+     gap after the final E that isn't there before the S, so a matching negative
+     margin keeps the word optically centred against the mark beside it. */
+  header.top h1{font-family:var(--sans); font-weight:800; font-size:18px; margin:0 -0.34em 0 0; color:#f1f4fa; letter-spacing:0.34em; text-transform:uppercase;}
   header.top .goal{color:var(--muted); font-size:12.5px; letter-spacing:0.03em;}
   .conn-status{display:flex; align-items:center; gap:8px; font-size:12.5px; color:var(--muted); cursor:pointer; letter-spacing:0.03em;}
   .conn-status .dotlive{width:6px;height:6px;border-radius:50%; background:var(--ok); box-shadow:0 0 8px rgba(111,174,140,0.7);}
@@ -175,8 +180,14 @@
   #accessGate.open{display:flex;}
   .gate-card{max-width:360px; width:100%; background:var(--panel); backdrop-filter:blur(14px); border:1px solid var(--line);
     border-radius:var(--r-card); padding:32px 28px; box-shadow:var(--shadow); text-align:center;}
-  .gate-card .logo-mark{width:44px; height:44px; margin:0 auto 18px;}
-  .gate-card h2{font-family:var(--serif); font-weight:600; font-size:22px; color:var(--heading); margin:0 0 6px;}
+  /* The tile treatment is scoped to the header; on the gate the mark stands on
+     its own above the wordmark. Flex centring so the SVG sits square in the
+     box rather than on the text baseline. */
+  .gate-card .logo-mark{width:44px; height:44px; margin:0 auto 18px; display:flex; align-items:center; justify-content:center;}
+  /* The gate is the app's front door, so it carries the wordmark treatment
+     rather than the serif heading style used elsewhere. No tagline here —
+     this is a daily unlock screen, not a first-impression landing page. */
+  .gate-card h2{font-family:var(--sans); font-weight:800; font-size:20px; color:var(--heading); margin:0 -0.34em 8px 0; letter-spacing:0.34em; text-transform:uppercase;}
   .gate-card p{color:var(--muted); font-size:13px; margin:0 0 20px; line-height:1.6;}
   .gate-card input{width:100%; box-sizing:border-box; background:rgba(0,0,0,0.25); border:1px solid var(--line-2); color:var(--text);
     padding:12px 14px; border-radius:var(--r-sm); font-size:15px; text-align:center; letter-spacing:0.06em; margin-bottom:12px;}
@@ -259,10 +270,9 @@
 <div id="accessGate">
   <div class="gate-card">
     <div class="logo-mark" style="margin-left:auto;margin-right:auto;">
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-        <circle cx="16.5" cy="4.5" r="2.1" fill="#6f9ff2"></circle>
-        <path d="M9 21 L12.5 15 L10 12 L13 8 L16 11.5 L15 15 L18.5 13" stroke="#6f9ff2" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" fill="none"></path>
-        <path d="M6.5 15.5 L10 12" stroke="#6f9ff2" stroke-width="2.1" stroke-linecap="round" fill="none"></path>
+      <!-- The Stride S — see brand/stride-mark.svg -->
+      <svg width="28" height="28" viewBox="0 0 48 48" fill="none" aria-hidden="true">
+        <path d="M34 16 A 9.5 9.5 0 1 0 24 24 A 9.5 9.5 0 1 1 14 32" stroke="#6f9ff2" stroke-width="4.6" stroke-linecap="round" fill="none"></path>
       </svg>
     </div>
     <div id="gateForm">
@@ -284,10 +294,10 @@
   <header class="top fade-in">
     <div class="brand">
       <div class="logo-mark" role="img" aria-label="Stride">
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-          <circle cx="16.5" cy="4.5" r="2.1" fill="#6f9ff2"></circle>
-          <path d="M9 21 L12.5 15 L10 12 L13 8 L16 11.5 L15 15 L18.5 13" stroke="#6f9ff2" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" fill="none"></path>
-          <path d="M6.5 15.5 L10 12" stroke="#6f9ff2" stroke-width="2.1" stroke-linecap="round" fill="none"></path>
+        <!-- The Stride S: one continuous route line traced into an S.
+             Same geometry as brand/stride-mark.svg — keep them in step. -->
+        <svg width="26" height="26" viewBox="0 0 48 48" fill="none" aria-hidden="true">
+          <path d="M34 16 A 9.5 9.5 0 1 0 24 24 A 9.5 9.5 0 1 1 14 32" stroke="#6f9ff2" stroke-width="4.6" stroke-linecap="round" fill="none"></path>
         </svg>
       </div>
       <h1>Stride</h1>

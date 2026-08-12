@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" fill="none" role="img" aria-label="Stride">
+  <title>Stride</title>
+  <defs><linearGradient id="tile" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#1a2740"/><stop offset="1" stop-color="#0b1322"/></linearGradient></defs>
+  <rect width="512" height="512" rx="114" fill="url(#tile)"/>
+  <rect x="0.5" y="0.5" width="511" height="511" rx="113.5" fill="none" stroke="#ffffff" stroke-opacity="0.08"/>
+  <g transform="translate(87.964 87.964) scale(7.00150)"><path d="M34 16 A 9.5 9.5 0 1 0 24 24 A 9.5 9.5 0 1 1 14 32" stroke="#6f9ff2" stroke-width="4.6" stroke-linecap="round" fill="none"/></g>
+</svg>

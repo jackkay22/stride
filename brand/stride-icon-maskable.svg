@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" fill="none" role="img" aria-label="Stride">
+  <title>Stride</title>
+  <defs><linearGradient id="tileM" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#1a2740"/><stop offset="1" stop-color="#0b1322"/></linearGradient></defs>
+  <rect width="512" height="512" fill="url(#tileM)"/>
+  <g transform="translate(107.308 107.308) scale(6.19549)"><path d="M34 16 A 9.5 9.5 0 1 0 24 24 A 9.5 9.5 0 1 1 14 32" stroke="#6f9ff2" stroke-width="4.6" stroke-linecap="round" fill="none"/></g>
+</svg>

@@ -19,6 +19,13 @@ if (!SUPABASE_URL || SUPABASE_URL.includes('xxxxxxxxxxxx')) {
 
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
+// Registered from here rather than per-page, so every page in the app gets it.
+// The path is relative to the page, which keeps the worker's scope to
+// /self-service/ — it must not extend over the personal app one level up.
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js').catch(() => {}));
+}
+
 async function getSession() {
   const { data } = await sb.auth.getSession();
   return data.session || null;
