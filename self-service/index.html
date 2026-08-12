@@ -58,6 +58,10 @@
       </div>
 
       <div id="auth-msg"></div>
+      <p class="hint" style="margin-top:14px;">
+        The first sign-in after a quiet spell can take up to a minute — the free server hosting
+        this wakes on demand. It isn't stuck, just slow to start.
+      </p>
     </div>
   </section>
 
@@ -83,6 +87,13 @@
       <div class="row" style="margin-top:18px;">
         <a class="btn secondary small" href="./upload.html">Replace plan</a>
       </div>
+    </div>
+
+    <div id="plan-loading" class="card" style="display:none;">
+      <p style="margin:0; color:var(--muted); font-size:14px;">Loading your plan…</p>
+      <p class="hint" id="plan-loading-slow" style="display:none; margin-top:8px;">
+        Still going — the server sleeps when it isn't being used and can take up to a minute to wake up.
+      </p>
     </div>
 
     <div id="plan-sessions"></div>
@@ -148,6 +159,8 @@ tabSignup.addEventListener('click', () => setMode('signup'));
 document.getElementById('auth-form').addEventListener('submit', async (e) => {
   e.preventDefault();
   authSubmit.disabled = true;
+  const submitLabel = authSubmit.textContent;
+  authSubmit.textContent = mode === 'signin' ? 'Signing in…' : 'Creating account…';
   authMsg.innerHTML = '';
   const email = document.getElementById('email').value.trim();
   const password = document.getElementById('password').value;
@@ -170,13 +183,17 @@ document.getElementById('auth-form').addEventListener('submit', async (e) => {
     showMsg(authMsg, err.message, 'error');
   } finally {
     authSubmit.disabled = false;
+    authSubmit.textContent = submitLabel;
   }
 });
 
 document.getElementById('forgot-link').addEventListener('click', async (e) => {
   e.preventDefault();
+  const link = e.currentTarget;
   const email = document.getElementById('email').value.trim();
   if (!email) { showMsg(authMsg, 'Enter your email above first, then click "Forgot password?" again.', 'info'); return; }
+  const linkLabel = link.textContent;
+  link.textContent = 'Sending…';
   try {
     const redirectTo = new URL('./reset-password.html', window.location.href).toString();
     const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo });
@@ -184,12 +201,25 @@ document.getElementById('forgot-link').addEventListener('click', async (e) => {
     showMsg(authMsg, 'If that email has an account, a reset link is on its way.', 'ok');
   } catch (err) {
     showMsg(authMsg, err.message, 'error');
+  } finally {
+    link.textContent = linkLabel;
   }
 });
 
 document.getElementById('btn-sign-out').addEventListener('click', signOut);
 
 /* ---------- dashboard ---------- */
+
+// Which week "today" falls in, so a long plan can open on the week that
+// actually matters instead of week 1. Falls back to week 1 for a plan that
+// hasn't started yet or has already finished.
+function currentWeekOf(plan) {
+  const today = new Date().toISOString().slice(0, 10);
+  const upcoming = plan.find((s) => s.date >= today);
+  if (upcoming) return upcoming.week;
+  return plan.length ? plan[plan.length - 1].week : 1;
+}
+
 async function renderDashboard() {
   const session = await getSession();
   document.getElementById('nav-signed-in').style.display = 'flex';
@@ -197,19 +227,32 @@ async function renderDashboard() {
   document.getElementById('dashboard-panel').style.display = 'block';
   document.getElementById('dash-lede').textContent = `Signed in as ${session.user.email}.`;
 
+  const loadingEl = document.getElementById('plan-loading');
+  const slowEl = document.getElementById('plan-loading-slow');
+  loadingEl.style.display = 'block';
+  // Render's free tier sleeps after ~15min idle; say so rather than looking hung.
+  const slowTimer = setTimeout(() => { slowEl.style.display = 'block'; }, 4000);
+
   let profile = null, plan = [];
   try {
     profile = await apiFetch('/api/profile');
     plan = await apiFetch('/api/plan');
   } catch (err) {
-    document.getElementById('dashboard-panel').innerHTML = `<div class="msg error">Couldn't load your plan: ${err.message}</div>`;
+    clearTimeout(slowTimer);
+    loadingEl.style.display = 'none';
+    showMsg(document.getElementById('plan-sessions'), `Couldn't load your plan: ${err.message}`, 'error');
     return;
+  } finally {
+    clearTimeout(slowTimer);
+    loadingEl.style.display = 'none';
+    slowEl.style.display = 'none';
   }
 
   if (!profile || plan.length === 0) {
     document.getElementById('no-plan-card').style.display = 'block';
     return;
   }
+  document.getElementById('no-plan-card').style.display = 'none';
 
   document.getElementById('dash-title').textContent = profile.race_name ? `Training for ${profile.race_name}` : 'Your plan';
   document.getElementById('plan-summary-card').style.display = 'block';
@@ -226,23 +269,78 @@ async function renderDashboard() {
 
   const container = document.getElementById('plan-sessions');
   container.innerHTML = '';
-  [...byWeek.keys()].sort((a, b) => a - b).forEach((week) => {
+
+  // A 12-week plan is fine fully expanded; a 37-week one is an unusable wall of
+  // scroll. Open the current week (plus the one either side) and fold the rest
+  // behind a summary the user can click.
+  const thisWeek = currentWeekOf(plan);
+  const weeks = [...byWeek.keys()].sort((a, b) => a - b);
+  const expandAll = weeks.length <= 4;
+
+  weeks.forEach((week) => {
     const sessions = byWeek.get(week);
-    const block = document.createElement('div');
-    block.className = 'week-block card';
     const headline = sessions.find((s) => s.week_headline)?.week_headline;
-    block.innerHTML = `<h3>Week ${week}</h3>${headline ? `<div class="headline">${headline}</div>` : ''}`;
+    const logged = sessions.filter((s) => s.status).length;
+
+    const block = document.createElement('details');
+    block.className = 'week-block card';
+    block.open = expandAll || Math.abs(week - thisWeek) <= 1;
+
+    const summary = document.createElement('summary');
+    const h3 = document.createElement('h3');
+    h3.textContent = `Week ${week}`;
+    if (week === thisWeek) {
+      const now = document.createElement('span');
+      now.className = 'week-now';
+      now.textContent = 'This week';
+      h3.appendChild(now);
+    }
+    summary.appendChild(h3);
+    const meta = document.createElement('div');
+    meta.className = 'headline';
+    meta.textContent = [headline, `${sessions.length} sessions`, logged ? `${logged} logged` : null]
+      .filter(Boolean).join(' · ');
+    summary.appendChild(meta);
+    block.appendChild(summary);
+
     sessions.forEach((s) => {
       const row = document.createElement('div');
       row.className = 'session-row';
-      row.innerHTML = `
-        <div class="day">${DAY_LABEL[s.day] || s.day}<span class="d">${fmtDate(s.date)}</span></div>
-        <div class="body"><div class="title">${s.title}</div><div class="targets">${s.targets || ''}</div></div>
-        <div class="status-btns">
-          <button class="hit ${s.status === 'hit' ? 'active' : ''}" data-week="${s.week}" data-day="${s.day}" data-status="hit">Hit</button>
-          <button class="niggle ${s.status === 'niggle' ? 'active' : ''}" data-week="${s.week}" data-day="${s.day}" data-status="niggle">Niggle</button>
-          <button class="miss ${s.status === 'miss' ? 'active' : ''}" data-week="${s.week}" data-day="${s.day}" data-status="miss">Miss</button>
-        </div>`;
+
+      const day = document.createElement('div');
+      day.className = 'day';
+      day.textContent = DAY_LABEL[s.day] || s.day;
+      const dateSpan = document.createElement('span');
+      dateSpan.className = 'd';
+      dateSpan.textContent = fmtDate(s.date);
+      day.appendChild(dateSpan);
+
+      const body = document.createElement('div');
+      body.className = 'body';
+      const title = document.createElement('div');
+      title.className = 'title';
+      title.textContent = s.title;
+      const targets = document.createElement('div');
+      targets.className = 'targets';
+      targets.textContent = s.targets || '';
+      body.append(title, targets);
+
+      // Built with textContent rather than innerHTML throughout: this content
+      // comes from a user's uploaded plan file, so an apostrophe or a stray
+      // angle bracket in a session title must never be able to break the page.
+      const btns = document.createElement('div');
+      btns.className = 'status-btns';
+      [['hit', 'Hit'], ['niggle', 'Niggle'], ['miss', 'Miss']].forEach(([status, label]) => {
+        const b = document.createElement('button');
+        b.className = status + (s.status === status ? ' active' : '');
+        b.textContent = label;
+        b.dataset.week = s.week;
+        b.dataset.day = s.day;
+        b.dataset.status = status;
+        btns.appendChild(b);
+      });
+
+      row.append(day, body, btns);
       block.appendChild(row);
     });
     container.appendChild(block);
@@ -251,19 +349,25 @@ async function renderDashboard() {
   container.querySelectorAll('.status-btns button').forEach((btn) => {
     btn.addEventListener('click', async () => {
       const { week, day, status } = btn.dataset;
-      btn.disabled = true;
+      const siblings = btn.parentElement.querySelectorAll('button');
+      siblings.forEach((b) => { b.disabled = true; });
       try {
         await apiFetch('/api/sessions', { method: 'POST', body: JSON.stringify({ week: Number(week), day, status }) });
         renderDashboard();
       } catch (err) {
-        alert(`Couldn't save that: ${err.message}`);
-        btn.disabled = false;
+        showMsg(document.getElementById('plan-sessions'), `Couldn't save that: ${err.message}`, 'error');
+        siblings.forEach((b) => { b.disabled = false; });
       }
     });
   });
 }
 
 (async () => {
+  // apiFetch redirects here with ?expired=1 after clearing a dead session.
+  if (new URLSearchParams(window.location.search).has('expired')) {
+    showMsg(authMsg, 'Your session expired — sign in again to pick up where you left off.', 'info');
+    history.replaceState(null, '', window.location.pathname);
+  }
   const session = await getSession();
   if (session) renderDashboard();
 })();
