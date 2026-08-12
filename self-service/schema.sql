@@ -4,6 +4,13 @@
 -- these are entirely new tables (su_* prefix) and never touch
 -- plan_sessions, sessions_log, change_log, etc. Safe to run alongside it.
 --
+-- Safe to re-run as often as you like: tables and indexes are guarded with
+-- "if not exists", and each policy is dropped before being recreated. Postgres
+-- has no "create policy if not exists", so without those drops a second run
+-- fails with 'policy "..." already exists' — which is exactly what happens
+-- when new tables are added here later and the whole file gets run again.
+-- Re-running never touches existing rows.
+--
 -- Multi-user by design: every table carries a user_id referencing Supabase
 -- Auth's built-in auth.users, and has Row Level Security switched on with a
 -- policy that only ever matches auth.uid() = user_id. That means isolation
@@ -25,6 +32,7 @@ create table if not exists su_profiles (
 
 alter table su_profiles enable row level security;
 
+drop policy if exists "own profile only" on su_profiles;
 create policy "own profile only" on su_profiles
   for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
 
@@ -58,6 +66,7 @@ create index if not exists su_plan_sessions_user_date_idx on su_plan_sessions (u
 
 alter table su_plan_sessions enable row level security;
 
+drop policy if exists "own sessions only" on su_plan_sessions;
 create policy "own sessions only" on su_plan_sessions
   for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
 
@@ -79,6 +88,7 @@ create index if not exists su_sessions_log_user_idx on su_sessions_log (user_id,
 
 alter table su_sessions_log enable row level security;
 
+drop policy if exists "own session log only" on su_sessions_log;
 create policy "own session log only" on su_sessions_log
   for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
 
@@ -99,6 +109,7 @@ create index if not exists su_change_log_user_idx on su_change_log (user_id, cha
 
 alter table su_change_log enable row level security;
 
+drop policy if exists "own change log only" on su_change_log;
 create policy "own change log only" on su_change_log
   for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
 
@@ -131,6 +142,7 @@ create table if not exists su_integrations (
 
 alter table su_integrations enable row level security;
 
+drop policy if exists "own integrations only" on su_integrations;
 create policy "own integrations only" on su_integrations
   for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
 
@@ -154,6 +166,7 @@ create index if not exists su_strava_activities_user_date_idx
 
 alter table su_strava_activities enable row level security;
 
+drop policy if exists "own activities only" on su_strava_activities;
 create policy "own activities only" on su_strava_activities
   for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
 
