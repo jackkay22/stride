@@ -168,16 +168,16 @@ Commit. A minute or two later, `https://jackkay22.github.io/stride/self-service/
 Skip this and everything else still works — the Strava section stays hidden until the two
 variables below are set, so nobody sees a button that can't do anything.
 
-This needs its **own Strava API app**, separate from the personal app's. Strava allows one
-callback domain per app, and the personal app's is already pointed at its own Render service.
-Same Strava account, second app:
+Strava allows **one API application per account** — there's no way to register a second one.
+So both apps share the same Client ID and Secret, and the only thing that needs changing is
+which domain Strava is willing to redirect back to.
 
-1. Go to <https://www.strava.com/settings/api> → create a new app
-2. **Authorization Callback Domain:** `jackkay22.github.io`
-   (just the domain — no `https://`, no path. The redirect lands on the app's own
-   `strava-callback.html` page, not on the backend, so this is the right domain.)
-3. Copy the **Client ID** and **Client Secret**
-4. Render → your self-service service → **Environment** → add:
+1. Go to <https://www.strava.com/settings/api> and open your existing app
+2. Change **Authorization Callback Domain** to `jackkay22.github.io`
+   (just the domain — no `https://`, no path. The redirect lands on this app's own
+   `strava-callback.html` page rather than on the backend, so this is the right value.)
+3. Copy the **Client ID** and **Client Secret** — the same ones the personal app uses
+4. Render → your **self-service** service → **Environment** → add:
 
    | Name | Value |
    | --- | --- |
@@ -186,8 +186,24 @@ Same Strava account, second app:
 
 5. Save — Render redeploys, and a **Connect Strava** panel appears on everyone's plan page
 
-Each person connects their own Strava account. Nobody's runs are visible to anyone else, and
-none of it touches the personal app's Strava connection.
+Each person still connects their own Strava account and only ever sees their own runs. Sharing
+one registered application between the two apps doesn't mix anyone's data — Strava issues
+separate tokens per athlete, and those are stored per-user under RLS like everything else.
+
+**Does changing the callback domain break the personal app's Strava sync?** No. That domain is
+only used during the initial "authorise this app" handshake. The personal app already holds
+its tokens, and refreshing them — which is all the 3-hourly cron does — doesn't involve the
+callback domain (see `refreshStravaTokenIfNeeded` in the root `server.js`: it sends only the
+refresh token).
+
+The one caveat: if the personal app ever needs to authorise from scratch again — a revoked
+connection, or a refresh token that stops working — temporarily set the callback domain back
+to `stride-lrdq.onrender.com`, visit `/auth/strava` once, then set it back to
+`jackkay22.github.io`. Rare, but worth knowing before it happens.
+
+**Shared rate limit:** both apps count against the same Strava quota (roughly 100 requests per
+15 minutes, 1,000 per day). Nowhere near a problem for a handful of friends, but if this ever
+grew a real user base, that's the ceiling to watch.
 
 **Note on how syncing works:** runs are pulled in while someone is signed in and using the app
 — when they open it, and whenever they press **Sync now** — rather than on a background
