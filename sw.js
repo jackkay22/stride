@@ -3,12 +3,13 @@
    comes fresh from the backend, so nothing here can show stale sessions or statuses.
 
    Bump CACHE when the shell changes so old copies get cleared out. */
-const CACHE = 'stride-shell-v2';
+const CACHE = 'stride-shell-v3';
 
 const SHELL = [
   './',
   './index.html',
   './manifest.webmanifest',
+  './icons/favicon.svg',
   './icons/icon-192.png',
   './icons/icon-512.png',
   './icons/apple-touch-icon.png'
@@ -44,6 +45,16 @@ self.addEventListener('fetch', (event) => {
   // Anything off-origin — the Render backend, Chart.js, Google Fonts — is left alone.
   // Caching the API would risk showing yesterday's plan as though it were today's.
   if (url.origin !== self.location.origin) return;
+
+  // The self-service app is a separate app that happens to live under
+  // /self-service/ on the same site, so it falls inside this worker's scope by
+  // accident rather than by intent. Leave every one of its requests alone.
+  // Without this, the navigate handler below would store a self-service page as
+  // this app's cached './index.html' — so opening Stride offline would show
+  // someone else's sign-in screen — and an offline visit to self-service would
+  // be answered with the personal app. It has its own worker; this one should
+  // not touch it.
+  if (url.pathname.includes('/self-service/')) return;
 
   // Page loads: try the network first so a redeploy is picked up immediately,
   // and fall back to the cached copy only when offline.

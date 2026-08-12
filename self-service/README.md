@@ -52,6 +52,19 @@ without that overhead. One repo, one Supabase login, two small independent thing
 If this grows past "a handful of friends," splitting the repo/Supabase project too would be a
 reasonable next step, but isn't needed for this stage.
 
+### One wrinkle from sharing a site: service worker scope
+
+Both apps are on the same GitHub Pages site, so the personal app's service
+worker — registered at `/stride/sw.js` — has scope over `/stride/`, which
+technically includes `/stride/self-service/`. Left alone it would treat this
+app's pages as its own: visiting here would overwrite the personal app's cached
+offline shell with a self-service page, and opening this app offline would serve
+the personal app instead.
+
+`../sw.js` therefore explicitly ignores anything under `/self-service/`, and
+this app registers its own worker scoped to this folder. Worth knowing if either
+worker is ever rewritten — the exclusion has to stay.
+
 ## How isolation actually works
 
 Every `su_*` table has Row Level Security switched on with a policy of `auth.uid() = user_id`
@@ -79,6 +92,7 @@ deliberate trade-offs to avoid ever needing the service-role key.
 | `strava-callback.html` | Where Strava sends people back after they authorise. Hands the code to the backend as an authenticated request — see the Strava note in `server.js` for why the redirect lands here rather than on the backend. |
 | `config.js` | The three non-secret values (Supabase URL, Supabase anon key, backend URL) — edit directly on GitHub after deploying, same pattern as `../passcode.js`. |
 | `app.js`, `style.css` | Shared Supabase client/auth helpers and look, used by every page above. |
+| `manifest.webmanifest`, `sw.js` | Make the app installable to a home screen and able to open offline. Icons come from `../icons/`, shared with the personal app — see `../brand/README.md`. |
 | `plan-schema.js` | The JSON shape an uploaded plan must match, and the validator. Mirrors the columns `../plan_sessions` already uses — see the comment at the top of the file for why it's defined fresh here rather than reused from elsewhere. |
 | `server.js` | The backend: auth-gated API for profile, plan, upload, session logging, change log. |
 | `schema.sql` | The four new database tables + Row Level Security policies. |

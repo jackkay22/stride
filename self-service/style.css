@@ -48,7 +48,13 @@ header.top .logo-mark{width:40px; height:40px; border-radius:12px; flex-shrink:0
   background:linear-gradient(160deg, #1a2740 0%, #101a2c 100%); border:1px solid rgba(255,255,255,0.08);
   display:flex; align-items:center; justify-content:center; box-shadow:0 6px 16px rgba(0,0,0,0.4);
   font-family:var(--serif); font-weight:600; font-size:19px; color:var(--blue);}
-header.top h1{font-family:var(--sans); font-weight:800; font-size:18px; margin:0; color:#f1f4fa; letter-spacing:0.06em; text-transform:uppercase;}
+/* Wordmark: the spaced-letter treatment, matching the personal app. The
+   trailing letter-spacing adds a gap after the final E that isn't there before
+   the S, so the negative right margin keeps the word optically centred against
+   whatever sits beside it. The "Self-Service" tag is exempt — it's a label on
+   the wordmark, not part of it. */
+header.top h1{font-family:var(--sans); font-weight:800; font-size:18px; margin:0; color:#f1f4fa; letter-spacing:0.34em; text-transform:uppercase;}
+header.top h1 .tag{letter-spacing:0.08em;}
 header.top .tag{font-size:10px; color:var(--blue); letter-spacing:0.08em; text-transform:uppercase; background:rgba(111,159,242,0.12); border:1px solid rgba(111,159,242,0.28); padding:2px 8px; border-radius:999px; margin-left:8px; vertical-align:middle; font-weight:700;}
 header.top nav{display:flex; gap:18px; align-items:center; font-size:13px;}
 header.top nav a, header.top nav button.link{color:var(--muted-2); font-family:inherit; font-size:13px; background:none; border:none; cursor:pointer; padding:0;}
@@ -158,6 +164,24 @@ header.top nav a:hover, header.top nav button.link:hover{color:var(--text);}
 .card h3{font-family:var(--serif); font-weight:600; font-size:18px; color:var(--title); margin:0 0 4px;}
 
 h2.page-title{font-family:var(--serif); font-weight:600; font-size:28px; margin:0 0 8px; color:var(--heading); letter-spacing:-0.01em;}
+
+/* ---- signed-out landing: the full lockup, the one place the tagline belongs.
+   Deliberately not shown once someone is signed in — a tagline on a daily
+   training screen is clutter. ---- */
+.landing-lockup{display:flex; align-items:center; gap:18px; margin:0 0 30px;}
+.landing-lockup .mark{width:64px; height:64px; border-radius:18px; flex-shrink:0;
+  background:linear-gradient(160deg, #1a2740 0%, #101a2c 100%); border:1px solid rgba(255,255,255,0.08);
+  display:flex; align-items:center; justify-content:center; box-shadow:0 10px 24px rgba(0,0,0,0.45);}
+.landing-lockup .wordmark{font-family:var(--sans); font-weight:800; font-size:30px; color:var(--heading);
+  letter-spacing:0.34em; text-transform:uppercase; line-height:1; margin-right:-0.34em;}
+.landing-lockup .tagline{font-size:11px; font-weight:600; letter-spacing:0.22em; text-transform:uppercase;
+  color:var(--muted); margin-top:9px;}
+@media (max-width:560px){
+  .landing-lockup{gap:14px;}
+  .landing-lockup .mark{width:52px; height:52px; border-radius:15px;}
+  .landing-lockup .wordmark{font-size:22px;}
+  .landing-lockup .tagline{font-size:9.5px; letter-spacing:0.18em;}
+}
 p.lede{color:var(--muted); font-size:14.5px; line-height:1.6; margin:0 0 28px; max-width:62ch;}
 
 label{display:block; font-size:12.5px; font-weight:600; color:var(--muted-2); letter-spacing:0.02em; margin:16px 0 6px;}
