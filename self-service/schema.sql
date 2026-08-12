@@ -101,3 +101,66 @@ alter table su_change_log enable row level security;
 
 create policy "own change log only" on su_change_log
   for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+/* ============================================================
+   STRAVA — per-user connections.
+
+   The personal app has one row in `integrations` because it has one user.
+   Here each person authorises their own Strava account, so tokens are stored
+   per-user and protected by the same RLS rule as everything else: a token row
+   is only ever readable by the user it belongs to.
+
+   Note there is deliberately no background/cron sync. A scheduled job runs
+   with no user present, so it would need the Supabase service-role key —
+   the one thing this app is built never to use. Instead the backend syncs a
+   user's activities while they're signed in and using the app, with their own
+   credentials. See server.js and README.md.
+   ============================================================ */
+
+create table if not exists su_integrations (
+  user_id uuid not null references auth.users(id) on delete cascade,
+  provider text not null,                -- 'strava' (whoop later, same shape)
+  access_token text,
+  refresh_token text,
+  expires_at timestamptz,
+  athlete_id bigint,                     -- provider's own id for the account
+  connected_at timestamptz not null default now(),
+  last_synced_at timestamptz,
+  primary key (user_id, provider)
+);
+
+alter table su_integrations enable row level security;
+
+create policy "own integrations only" on su_integrations
+  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+create table if not exists su_strava_activities (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  strava_id bigint not null,
+  activity_date date not null,
+  distance_km numeric not null,
+  moving_time_seconds int,
+  pace text,
+  avg_hr numeric,
+  title text,
+  activity_type text,
+  created_at timestamptz not null default now(),
+  unique (user_id, strava_id)
+);
+
+create index if not exists su_strava_activities_user_date_idx
+  on su_strava_activities (user_id, activity_date desc);
+
+alter table su_strava_activities enable row level security;
+
+create policy "own activities only" on su_strava_activities
+  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+-- No table is needed for the OAuth handshake itself. Strava redirects back to
+-- a page in this app (strava-callback.html), not to the backend — that page
+-- still holds the user's signed-in session, so it can hand the authorisation
+-- code to the backend as a normal authenticated request. The backend therefore
+-- always knows who it is acting for, and never needs privileged access to look
+-- an in-flight handshake up. CSRF is covered by a random `state` value the
+-- frontend keeps in sessionStorage and checks on return.

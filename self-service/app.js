@@ -57,6 +57,16 @@ async function apiFetch(path, options = {}) {
 
   const body = await res.json().catch(() => ({}));
   if (!res.ok) {
+    // An expired/invalid token isn't something the user can act on from the
+    // page they're on — clear it and send them to sign in, rather than showing
+    // a raw "session has expired" error next to controls that now do nothing.
+    if (res.status === 401) {
+      await sb.auth.signOut().catch(() => {});
+      const target = new URL('./index.html', window.location.href);
+      target.searchParams.set('expired', '1');
+      window.location.href = target.toString();
+      throw new Error('Your session expired — sending you back to sign in.');
+    }
     const err = new Error(body.error || `Request failed (${res.status}).`);
     err.details = body.details;
     throw err;

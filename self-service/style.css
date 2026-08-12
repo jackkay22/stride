@@ -84,8 +84,24 @@ textarea.json{font-family:'SFMono-Regular', Menlo, Consolas, monospace; font-siz
 .stat-row .k{color:var(--muted);} .stat-row .v{font-weight:600; color:#cdd5e3;}
 
 .week-block{margin-bottom:26px;}
-.week-block h3{font-family:var(--serif); font-weight:600; font-size:17px; color:var(--title); margin:0 0 4px;}
+.week-block h3{font-family:var(--serif); font-weight:600; font-size:17px; color:var(--title); margin:0 0 4px; display:inline-flex; align-items:center; gap:10px;}
 .week-block .headline{color:var(--dim); font-size:12px; margin-bottom:12px;}
+
+/* Weeks are <details> so a long plan collapses instead of scrolling forever. */
+.week-block > summary{cursor:pointer; list-style:none; padding-right:26px; position:relative;}
+.week-block > summary::-webkit-details-marker{display:none;}
+.week-block > summary::after{
+  content:''; position:absolute; right:4px; top:7px; width:7px; height:7px;
+  border-right:2px solid var(--muted); border-bottom:2px solid var(--muted);
+  transform:rotate(45deg); transition:transform .18s ease;
+}
+.week-block[open] > summary::after{transform:rotate(-135deg);}
+.week-block > summary:focus-visible{outline:2px solid var(--blue); outline-offset:4px; border-radius:6px;}
+.week-block > summary .headline{margin-bottom:0;}
+.week-block[open] > summary{margin-bottom:12px;}
+.week-now{font-size:10px; font-weight:800; letter-spacing:0.08em; text-transform:uppercase; color:var(--blue);
+  background:rgba(111,159,242,0.12); border:1px solid rgba(111,159,242,0.3); padding:2px 8px; border-radius:999px;
+  font-family:var(--sans);}
 
 .session-row{display:grid; grid-template-columns:70px 1fr auto; gap:14px; align-items:center; padding:12px 0; border-bottom:1px solid var(--line);}
 .session-row:last-child{border-bottom:none;}
