@@ -3,7 +3,7 @@
    comes fresh from the backend, so nothing here can show stale sessions or statuses.
 
    Bump CACHE when the shell changes so old copies get cleared out. */
-const CACHE = 'stride-shell-v3';
+const CACHE = 'stride-shell-v4';
 
 const SHELL = [
   './',

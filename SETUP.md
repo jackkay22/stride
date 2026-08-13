@@ -220,5 +220,6 @@ If you ever want to check nothing's broken, from the repo folder:
 npm install && npm test
 ```
 
-19 tests covering the date handling, the write rules, the phase warnings, and the connector.
-They run against an in-memory fake, so they never touch your real data.
+29 tests covering the date handling, the write rules, the phase warnings, the Coach Jack
+quick-action presets, and the connector. They run against an in-memory fake, so they never
+touch your real data.

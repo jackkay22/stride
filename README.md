@@ -62,21 +62,48 @@ add `STRIDE_API_KEY` to Render, then add the connector in Claude's settings.
 | `passcode.js` | Holds a SHA-256 fingerprint of the access passcode — never the passcode itself. Edit directly on GitHub to set or change it; see SETUP.md. |
 | `passcode-tool.html` | Standalone page that turns a passcode into that fingerprint, entirely client-side. Not linked from the app. |
 | `server.js` | Express app: Strava/Whoop sync, VO2, session log, and the plan endpoints. |
-| `plan-service.js` | The plan read/write logic and the safety checks. One implementation, used by both the HTTP endpoints and the MCP tools. |
-| `mcp-server.js` | Wraps that as MCP tools so Claude can call them mid-conversation. Mounted at `/mcp` on the same service. |
+| `plan-service.js` | The plan read/write logic, the safety checks, and the Coach Jack quick-action rules. One implementation, used by the HTTP endpoints, the app's own writes, and the MCP tools. |
+| `mcp-server.js` | Wraps the plan logic as MCP tools so Claude can call them mid-conversation. Mounted at `/mcp` on the same service. |
 | `schema.sql` | Database tables. Safe to re-run. |
 | `seed_plan.sql` | Loads the 12-week plan into `plan_sessions`. Generated from `index.html`. |
-| `test/` | `npm test` — 19 tests, run against an in-memory fake, never touch live data. |
+| `test/` | `npm test` — 29 tests, run against an in-memory fake, never touch live data. |
 
 ### Design
 
-The UI follows the "Stride Weekly Premium" handoff: dark radial background, glass day
-rows (translucent fill, 14px backdrop blur, hairline border, soft shadow), Petrona serif
-for headline and session-title moments, Manrope for everything else. Status is carried by
-a coloured left-edge accent bar plus an icon, not saturated fills — those colours are
-intentionally desaturated and shouldn't be brightened.
+The UI follows the "Stride Weekly Premium" handoff: dark radial background, glass panels
+(translucent fill, 14px backdrop blur, hairline border, soft shadow), Petrona serif for
+headline and session-title moments, Manrope for everything else. Status is carried by a
+coloured accent plus an icon, not saturated fills — those colours are intentionally
+desaturated and shouldn't be brightened.
 
-Two things worth knowing:
+The app is structured like a native app rather than one long page: a fixed bottom tab bar
+switches between four views —
+
+- **Today** — just the next or current session, front and centre, plus the Coach Jack
+  quick-action chat panel.
+- **Plan** — the full block track and a drag-and-drop weekly calendar. Drag a session card
+  onto another day to reschedule it directly (no separate edit screen); tap a card to open
+  its full detail. A move that shifts load between weeks or into a recovery week comes back
+  as a confirm sheet with the same warnings Claude would see, rather than applying silently.
+- **Stats** — VO2/VDOT, pace zones, race predictor and Strava, reached via a secondary tab
+  row so they're out of the way of the daily view.
+- **More** — plan notes, the decision-gate table, nutrition targets, and session history.
+
+**Coach Jack** is the quick-action panel on Today: a small set of tappable presets (Hit it /
+Something niggled / Missed it / Feeling ill / Holiday mode / Hot weather) styled as a chat,
+with fixed, coach-voiced reply copy per outcome. It is **not** an AI assistant — there's no
+model call, no generated text, and no billing behind it. Every preset maps to a fixed rule in
+`plan-service.js` (`applyQuickAction`) built on the same `update_session`/`reschedule_session`
+logic Claude uses, so the app and Claude can never disagree about what a preset does:
+
+| Preset | What it does |
+| --- | --- |
+| Missed it | Marks the session missed. A missed long run offers to move it forward a day (the usual reschedule warnings apply); anything else is just dropped, no reschedule. |
+| Feeling ill | Eases the next 3 days: quality/long/easy sessions become an easy run, bike/strength become rest. Rest days and events are left alone. |
+| Holiday mode | Stands down every session across a chosen date range (max 28 days) to a no-target rest day. Races in that range are left alone and flagged back explicitly. |
+| Hot weather | Leaves the date and type as they are, and adds fixed heat guidance to that session's detail (slower pace, more fluid; hard efforts drop a gear). |
+
+Two other things worth knowing:
 
 - **Session type tags are neutral grey**, per the handoff — the old colour-coded type
   pills were dropped so status is the only thing carrying colour.
@@ -93,22 +120,25 @@ All dates render UK format — `13/08/2026` in rows, `Thursday, 13 Aug 2026` and
 | --- | --- | --- |
 | `GET /api/plan?from=&to=` | none | The plan, with statuses and notes |
 | `GET /api/change-log` | none | Record of every write |
-| `POST /api/plan/update-session` | API key | Mark a session hit/niggle/miss + notes |
-| `POST /api/plan/reschedule-session` | API key | Move a session or change its type |
+| `POST /api/plan/update-session` | API key | Mark a session hit/niggle/miss + notes (used by Claude) |
+| `POST /api/plan/reschedule-session` | API key | Move a session or change its type (used by Claude) |
+| `POST /api/app/reschedule-session` | none | Same logic, called from the app's own drag-and-drop calendar |
+| `POST /api/app/quick-action` | none | Runs a Coach Jack preset (`hit`/`niggle`/`miss`/`ill`/`holiday`/`heat`) |
 | `POST /mcp` | API key | MCP endpoint for the Claude connector |
 
-`reschedule-session` returns **409** with a list of warnings, and changes nothing, if the
-move would shift load between weeks, cross a training phase boundary, or put a hard session
-into a cutback or taper week. Re-send with `"confirm": true` to go ahead anyway; that gets
-recorded in `change_log` as an override.
+`reschedule-session` (both the Claude and app versions) returns **409** with a list of
+warnings, and changes nothing, if the move would shift load between weeks, cross a training
+phase boundary, or put a hard session into a cutback or taper week. Re-send with
+`"confirm": true` to go ahead anyway; that gets recorded in `change_log` as an override. The
+app's calendar shows these warnings in a confirm sheet before re-sending.
 
 The API key goes in an `Authorization: Bearer <key>` header, an `X-API-Key` header, or —
 for the Claude connector, which only has a URL field — as the last part of the path:
 `/mcp/<key>`.
 
-Note that the app's own endpoints (`/api/sessions`, `/api/vo2`, and the rest) are still
-unauthenticated, as they were before. The app is a static page on GitHub Pages, so it has
-nowhere safe to keep a key. Only the Claude write endpoints require one.
+Note that the app's own endpoints (`/api/sessions`, `/api/vo2`, `/api/app/*`, and the rest)
+are still unauthenticated, as they were before. The app is a static page on GitHub Pages, so
+it has nowhere safe to keep a key. Only the Claude write endpoints require one.
 
 ## Local testing (optional, before deploying)
 ```

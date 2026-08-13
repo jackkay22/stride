@@ -9,7 +9,7 @@ import { makeFakeSupabase } from './fake-supabase.mjs';
 import { planRows } from './seed-fixture.mjs';
 import { createMcpRouter } from '../mcp-server.js';
 import {
-  getPlan, getChangeLog, updateSession, rescheduleSession, slotForDate, PlanError,
+  getPlan, getChangeLog, updateSession, rescheduleSession, applyQuickAction, slotForDate, PlanError,
 } from '../plan-service.js';
 
 const fresh = () =>
@@ -173,6 +173,121 @@ test('two sessions on one day forces a disambiguation rather than a guess', asyn
   // naming the type resolves it
   const res = await updateSession(db, { date: '2026-09-04', status: 'hit', session_type: 'easy' });
   assert.equal(res.ok, true);
+});
+
+/* ---------------- quick actions (Coach Jack presets) ---------------- */
+
+test('quick action: hit just logs and gives a short acknowledgement', async () => {
+  const db = fresh();
+  const res = await applyQuickAction(db, { preset: 'hit', date: '2026-07-27' });
+  assert.equal(res.ok, true);
+  assert.equal(res.changes.length, 1);
+  assert.ok(res.coach[0].length > 0);
+  assert.equal((await getPlan(db, { from_date: '2026-07-27', to_date: '2026-07-27' }))[0].status, 'hit');
+});
+
+test('quick action: missed non-long session is dropped, no follow-up offered', async () => {
+  const db = fresh();
+  const res = await applyQuickAction(db, { preset: 'miss', date: '2026-07-29' }); // Wed quality, week 1
+  assert.equal(res.ok, true);
+  assert.equal(res.follow_up, undefined);
+  assert.equal(res.coach.length, 1);
+});
+
+test('quick action: missed long run offers a move, and declining leaves it alone', async () => {
+  const db = fresh();
+  // Week 4 Sun long run — the following Monday (week 5) is a genuine rest day.
+  const res = await applyQuickAction(db, { preset: 'miss', date: '2026-08-23' });
+  assert.equal(res.ok, true);
+  assert.ok(res.follow_up);
+  assert.equal(res.follow_up.kind, 'reschedule');
+  assert.equal(res.follow_up.to_date, '2026-08-24');
+  assert.ok(res.follow_up.declined_reply.length > 0);
+  // nothing moved yet — it's an offer, not an action
+  const still = await getPlan(db, { from_date: '2026-08-23', to_date: '2026-08-23' });
+  assert.equal(still[0].moved, null);
+});
+
+test('quick action: accepting the missed-long-run offer moves it via reschedule_session', async () => {
+  const db = fresh();
+  const offer = (await applyQuickAction(db, { preset: 'miss', date: '2026-08-23' })).follow_up;
+  const res = await rescheduleSession(db, {
+    from_date: offer.from_date, from_type: offer.from_type, to_date: offer.to_date,
+    confirm: true, reason: 'missed long run',
+  });
+  assert.equal(res.ok, true);
+  assert.equal(res.session.date, '2026-08-24');
+  assert.equal(res.session.moved.from, '2026-08-23');
+});
+
+test('quick action: feeling ill eases the next few days and is idempotent', async () => {
+  const db = fresh();
+  const res = await applyQuickAction(db, { preset: 'ill', date: '2026-07-27' });
+  assert.equal(res.ok, true);
+  assert.equal(res.changes.length, 3); // Mon easy, Tue bike->rest, Wed quality->easy
+  assert.equal(res.window.to_date, '2026-07-29');
+
+  const wed = (await getPlan(db, { from_date: '2026-07-29', to_date: '2026-07-29' }))[0];
+  assert.equal(wed.type, 'easy');
+  assert.match(wed.title, /easing off/);
+
+  // pressing it again over the same window changes nothing further
+  const again = await applyQuickAction(db, { preset: 'ill', date: '2026-07-27' });
+  assert.equal(again.changes.length, 0);
+  assert.match(again.coach[0], /nothing demanding/);
+});
+
+test('quick action: holiday mode clears a range but leaves races alone', async () => {
+  const db = fresh();
+  // Week 4: Mon quality, Tue rest, Wed = sports day (event)
+  const res = await applyQuickAction(db, {
+    preset: 'holiday', from_date: '2026-08-17', to_date: '2026-08-19',
+  });
+  assert.equal(res.ok, true);
+  assert.equal(res.changes.length, 1); // only the Monday quality session had anything to stand down
+  assert.ok(res.coach.some((c) => /Sports day|race on/.test(c)) || res.coach.length === 2);
+
+  const mon = (await getPlan(db, { from_date: '2026-08-17', to_date: '2026-08-17' }))[0];
+  assert.equal(mon.type, 'rest');
+  const event = (await getPlan(db, { from_date: '2026-08-19', to_date: '2026-08-19' }))[0];
+  assert.equal(event.type, 'event'); // untouched
+});
+
+test('quick action: holiday mode rejects an end date before the start, and overlong windows', async () => {
+  const db = fresh();
+  await assert.rejects(
+    () => applyQuickAction(db, { preset: 'holiday', from_date: '2026-08-19', to_date: '2026-08-17' }),
+    PlanError
+  );
+  await assert.rejects(
+    () => applyQuickAction(db, { preset: 'holiday', from_date: '2026-08-01', to_date: '2026-09-15' }),
+    PlanError
+  );
+});
+
+test('quick action: hot weather adjusts guidance without moving the session, and is idempotent', async () => {
+  const db = fresh();
+  const res = await applyQuickAction(db, { preset: 'heat', date: '2026-07-29' }); // quality
+  assert.equal(res.ok, true);
+  assert.match(res.session.detail, /Heat guidance:/);
+  assert.equal(res.session.date, '2026-07-29'); // unmoved
+  assert.equal(res.session.type, 'quality'); // untyped
+
+  const again = await applyQuickAction(db, { preset: 'heat', date: '2026-07-29' });
+  assert.equal(again.changes.length, 0);
+  assert.match(again.coach[0], /Already heat-adjusted/);
+});
+
+test('quick action: hot weather on a rest day is a no-op', async () => {
+  const db = fresh();
+  const res = await applyQuickAction(db, { preset: 'heat', date: '2026-08-01' }); // Sat rest, week 1
+  assert.equal(res.changes.length, 0);
+  assert.match(res.coach[0], /rest day/);
+});
+
+test('quick action: rejects an unknown preset', async () => {
+  const db = fresh();
+  await assert.rejects(() => applyQuickAction(db, { preset: 'nonsense', date: '2026-07-27' }), PlanError);
 });
 
 /* ---------------- MCP connector ---------------- */

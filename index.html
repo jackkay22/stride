@@ -82,10 +82,6 @@
   .conn-status.offline .dotlive{background:var(--miss); box-shadow:0 0 8px rgba(201,123,107,0.7);}
   .conn-detail{font-size:10.5px; color:var(--dim); max-width:220px; text-align:right; margin-top:2px;}
 
-  nav.tabs{display:flex; gap:2px; margin-bottom:30px; border-bottom:1px solid var(--line); overflow-x:auto;}
-  nav.tabs button{background:none; border:none; color:var(--muted); font-family:var(--sans); font-weight:600; font-size:13px; padding:10px 15px; cursor:pointer; border-bottom:2px solid transparent; white-space:nowrap;}
-  nav.tabs button.active{color:var(--blue); border-bottom-color:var(--blue);}
-  nav.tabs button:hover{color:var(--text);}
   .view{display:none;} .view.active{display:block;}
 
   .hero{background:var(--panel); backdrop-filter:blur(14px); border:1px solid var(--line); border-radius:var(--r-card); padding:30px 28px; margin-bottom:10px; display:grid; grid-template-columns: 1.1fr 0.9fr 1fr; gap:26px; box-shadow:var(--shadow);}
@@ -259,6 +255,124 @@
   ol.rules-list{margin:0; padding-left:20px; font-size:13.5px; color:var(--muted); line-height:1.9;}
   ol.rules-list b{color:var(--text);}
   .gate-table td:first-child{font-size:12px; color:var(--muted);}
+
+  /* ============================================================
+     BOTTOM TAB NAVIGATION — replaces the old top nav.tabs as the app's
+     primary navigation, so switching views feels like a native app rather
+     than a webpage. Fixed, blurred, safe-area aware for notched phones.
+     ============================================================ */
+  .wrap{padding-bottom:104px;}
+  @media (max-width:640px){ .wrap{padding-bottom:96px;} }
+  nav.bottomtabs{position:fixed; left:0; right:0; bottom:0; z-index:80; display:flex;
+    background:rgba(10,15,26,0.86); backdrop-filter:blur(20px); border-top:1px solid var(--line);
+    padding:6px 6px calc(6px + env(safe-area-inset-bottom, 0px));
+    box-shadow:0 -8px 24px rgba(0,0,0,0.35);}
+  nav.bottomtabs button{flex:1; background:none; border:none; color:var(--dim-2); font-family:var(--sans);
+    display:flex; flex-direction:column; align-items:center; gap:3px; padding:8px 4px 6px; cursor:pointer;
+    border-radius:14px; transition:color .15s ease, background .15s ease;}
+  nav.bottomtabs button svg{width:22px; height:22px;}
+  nav.bottomtabs button span{font-size:10.5px; font-weight:700; letter-spacing:0.02em;}
+  nav.bottomtabs button.active{color:var(--blue);}
+  nav.bottomtabs button.active svg{filter:drop-shadow(0 0 8px rgba(111,159,242,0.5));}
+  nav.bottomtabs button:active{background:rgba(255,255,255,0.05);}
+
+  /* secondary in-page tabs, used inside the Stats view to reach Fitness / Zones /
+     Predictor / Strava without giving each its own place in the bottom bar */
+  nav.subnav{display:flex; gap:6px; margin-bottom:22px; overflow-x:auto; padding-bottom:2px;}
+  nav.subnav button{background:var(--panel); border:1px solid var(--line); color:var(--muted);
+    font-family:var(--sans); font-weight:700; font-size:12px; padding:8px 15px; border-radius:999px;
+    cursor:pointer; white-space:nowrap; transition:all .15s ease;}
+  nav.subnav button.active{color:#0a1120; background:linear-gradient(90deg, var(--blue-deep), var(--blue)); border-color:transparent;}
+  nav.subnav button:hover:not(.active){border-color:var(--line-2); color:var(--text);}
+  .subview{display:none;} .subview.active{display:block;}
+
+  /* ---- Today view: one session, front and centre ---- */
+  .today-strip{display:flex; align-items:center; justify-content:space-between; margin-bottom:22px; color:var(--muted); font-size:13px;}
+  .today-strip b{color:var(--heading); font-family:var(--serif); font-size:15px; font-weight:600;}
+  .today-hero{background:var(--panel); backdrop-filter:blur(14px); border:1px solid rgba(111,159,242,0.3); border-radius:24px;
+    padding:32px 28px; box-shadow:0 16px 40px rgba(61,111,214,0.16), var(--shadow); position:relative; overflow:hidden;}
+  .today-hero::before{content:''; position:absolute; top:-40%; right:-20%; width:60%; height:120%;
+    background:radial-gradient(circle, rgba(111,159,242,0.14) 0%, transparent 70%); pointer-events:none;}
+  .today-eyebrow{color:var(--blue); font-size:12px; text-transform:uppercase; letter-spacing:0.14em; font-weight:700; margin-bottom:8px;}
+  .today-hero h2{font-family:var(--serif); font-weight:600; font-size:30px; margin:0 0 6px; color:var(--heading); letter-spacing:-0.01em;}
+  @media (max-width:560px){ .today-hero h2{font-size:25px;} }
+  .today-hero .meta{color:var(--muted); font-size:14px; margin-bottom:4px;}
+  .today-hero .targets{color:var(--muted-2); font-size:15px; margin-top:14px; line-height:1.6;}
+  .today-hero .type{font-size:10.5px; font-weight:700; letter-spacing:0.08em; text-transform:uppercase; color:var(--blue-soft);
+    background:rgba(111,159,242,0.14); border:1px solid rgba(111,159,242,0.3); padding:4px 11px; border-radius:999px; display:inline-block; margin-bottom:14px;}
+  .today-hero .detail{margin-top:16px; padding-top:16px; border-top:1px solid var(--line); color:var(--muted-2); font-size:13.5px; line-height:1.7; white-space:pre-line;}
+  .today-hero .moved{display:inline-block; margin-top:10px; font-size:10.5px; text-transform:uppercase; letter-spacing:0.06em; color:var(--blue); background:rgba(111,159,242,0.12); border:1px solid rgba(111,159,242,0.28); border-radius:999px; padding:2px 9px;}
+  .today-hero .exlist{margin:14px 0 0; padding-left:18px; color:var(--muted-2); font-size:13.5px; line-height:1.8;}
+  .today-empty{text-align:center; padding:40px 20px; color:var(--muted);}
+
+  /* ---- Coach Jack: chat-style quick actions (fixed presets, no AI) ---- */
+  .coach-panel{margin-top:32px;}
+  .coach-head{display:flex; align-items:center; gap:10px; margin-bottom:14px;}
+  .coach-avatar{width:32px; height:32px; border-radius:50%; background:linear-gradient(160deg,#1a2740,#101a2c);
+    border:1px solid rgba(111,159,242,0.35); display:flex; align-items:center; justify-content:center;
+    font-family:var(--serif); font-weight:700; font-size:12px; color:var(--blue-soft); flex-shrink:0;}
+  .coach-head .who{font-weight:700; font-size:13.5px; color:var(--heading);}
+  .coach-head .sub{font-size:11.5px; color:var(--dim);}
+  .chat-log{display:flex; flex-direction:column; gap:10px; margin-bottom:16px; max-height:340px; overflow-y:auto; padding-right:2px;}
+  .bubble{max-width:84%; padding:12px 15px; border-radius:16px; font-size:13.5px; line-height:1.55;}
+  .bubble.coach{align-self:flex-start; background:var(--panel-2); border:1px solid var(--line); color:var(--text); border-bottom-left-radius:5px;}
+  .bubble.user{align-self:flex-end; background:linear-gradient(90deg, var(--blue-deep), var(--blue)); color:#f3f7ff; border-bottom-right-radius:5px; font-weight:600;}
+  .bubble.system{align-self:center; color:var(--dim); font-size:11.5px; background:none; padding:2px 6px;}
+  .chip-row{display:flex; flex-wrap:wrap; gap:8px;}
+  .chip-btn{border:1px solid var(--line-2); background:var(--panel); color:var(--text); font-family:var(--sans);
+    font-size:12.5px; font-weight:600; padding:10px 16px; border-radius:999px; cursor:pointer; transition:all .12s ease; white-space:nowrap;}
+  .chip-btn:hover{border-color:var(--muted); background:rgba(255,255,255,0.06); transform:translateY(-1px);}
+  .chip-btn:disabled{opacity:0.45; pointer-events:none;}
+  .chip-btn.hit{border-color:rgba(111,174,140,0.35); color:var(--ok-text);}
+  .chip-btn.niggle{border-color:rgba(201,161,90,0.35); color:var(--amber-text);}
+  .chip-btn.miss{border-color:rgba(201,123,107,0.35); color:var(--miss-text);}
+  .chip-btn.special{border-color:rgba(111,159,242,0.35); color:var(--blue-soft);}
+  .holiday-form{display:none; margin-top:12px; background:var(--panel-2); border:1px solid var(--line); border-radius:14px; padding:14px;}
+  .holiday-form.open{display:block;}
+  .holiday-form .row{display:flex; gap:10px; align-items:flex-end; flex-wrap:wrap;}
+  .holiday-form label{display:block; font-size:10.5px; color:var(--muted); text-transform:uppercase; letter-spacing:0.06em; font-weight:700; margin-bottom:5px;}
+  .holiday-form input{background:rgba(0,0,0,0.25); border:1px solid var(--line-2); color:var(--text); padding:8px 10px; border-radius:8px; font-family:var(--sans); font-size:13px;}
+
+  /* ---- Plan view: drag-and-drop weekly calendar ---- */
+  .cal-grid{display:grid; grid-template-columns:repeat(7, minmax(118px, 1fr)); gap:8px; overflow-x:auto; padding-bottom:6px; margin-bottom:6px;}
+  @media (max-width:760px){ .cal-grid{grid-template-columns:repeat(7, minmax(112px, 1fr));} }
+  .cal-day{background:var(--panel); backdrop-filter:blur(10px); border:1px solid var(--line); border-radius:16px; padding:10px 8px; min-height:150px;
+    display:flex; flex-direction:column; gap:6px; transition:border-color .12s ease, background .12s ease;}
+  .cal-day.is-today{border-color:rgba(111,159,242,0.4); box-shadow:0 0 0 1px rgba(111,159,242,0.1);}
+  .cal-day.dragover{border-color:var(--blue); background:rgba(111,159,242,0.08);}
+  .cal-daylabel{font-size:10px; font-weight:700; letter-spacing:0.08em; text-transform:uppercase; color:var(--muted-3);}
+  .cal-date{font-size:10.5px; color:var(--dim); margin-bottom:2px; font-variant-numeric:tabular-nums;}
+  .cal-card{background:var(--panel-2); border:1px solid var(--line-2); border-radius:11px; padding:8px 9px; cursor:grab; touch-action:none;
+    user-select:none; -webkit-user-select:none; transition:transform .12s ease, box-shadow .12s ease, opacity .12s ease;}
+  .cal-card:active{cursor:grabbing;}
+  .cal-card.dragging{opacity:0.35;}
+  .cal-card .type{font-size:8.5px; font-weight:700; letter-spacing:0.06em; text-transform:uppercase; color:var(--muted-2);}
+  .cal-card .ttl{font-size:11.5px; font-weight:600; color:var(--title); margin-top:2px; line-height:1.3;}
+  .cal-card .tg{font-size:10px; color:var(--dim); margin-top:2px; line-height:1.3;}
+  .cal-card .stbar{height:3px; border-radius:2px; margin-top:6px; background:rgba(255,255,255,0.1);}
+  .cal-card.is-hit .stbar{background:var(--ok);} .cal-card.is-niggle .stbar{background:var(--amber);} .cal-card.is-miss .stbar{background:var(--miss);}
+  .cal-ghost{position:fixed; z-index:150; pointer-events:none; opacity:0.94; transform:translate(-50%,-50%) scale(1.04);
+    box-shadow:0 18px 40px rgba(0,0,0,0.5); border-radius:11px;}
+  .cal-hint{font-size:11.5px; color:var(--dim); margin:-2px 0 14px;}
+
+  /* ---- reschedule confirm sheet ---- */
+  .sheet-backdrop{position:fixed; inset:0; background:rgba(4,8,16,0.72); backdrop-filter:blur(4px); display:none;
+    align-items:flex-end; justify-content:center; z-index:160;}
+  .sheet-backdrop.open{display:flex;}
+  .sheet{background:#0e1626; border:1px solid var(--line-2); border-top-left-radius:22px; border-top-right-radius:22px;
+    max-width:520px; width:100%; padding:22px 24px calc(22px + env(safe-area-inset-bottom, 0px)); box-shadow:0 -20px 50px rgba(0,0,0,0.55);}
+  @media (min-width:640px){ .sheet-backdrop{align-items:center;} .sheet{border-radius:var(--r-card);} }
+  .sheet h3{font-family:var(--serif); font-weight:600; font-size:19px; margin:0 0 10px; color:var(--heading);}
+  .sheet ul{margin:0 0 18px; padding-left:18px; color:var(--amber-text); font-size:13px; line-height:1.7;}
+  .sheet .actions{display:flex; gap:10px;}
+  .sheet .actions .btn{flex:1; justify-content:center;}
+
+  /* ---- toast, used for quick logs made from the Plan-view calendar ---- */
+  .toast-wrap{position:fixed; left:0; right:0; bottom:calc(78px + env(safe-area-inset-bottom, 0px)); z-index:170;
+    display:flex; justify-content:center; pointer-events:none; padding:0 16px;}
+  .toast{background:#0e1626; border:1px solid var(--line-2); border-radius:999px; padding:10px 18px; font-size:13px;
+    color:var(--text); box-shadow:0 12px 28px rgba(0,0,0,0.4); opacity:0; transform:translateY(8px); transition:opacity .2s ease, transform .2s ease; max-width:92%;}
+  .toast.show{opacity:1; transform:translateY(0);}
 </style>
 </head>
 <body>
@@ -311,17 +425,42 @@
     </div>
   </header>
 
-  <nav class="tabs fade-in d1">
-    <button class="active" data-view="plan">Plan</button>
-    <button data-view="fitness">Fitness</button>
-    <button data-view="zones">Pace Zones</button>
-    <button data-view="predict">Race Predictor</button>
-    <button data-view="strava">Strava</button>
-    <button data-view="plan-notes">Plan Notes</button>
-    <button data-view="history">History</button>
-  </nav>
+  <!-- Navigation used to be a top row of 7 text tabs. It's now the bottom tab
+       bar (nav.bottomtabs, near the end of the body) plus the Stats view's own
+       secondary row (nav.subnav) — see switchView() in the script below. -->
 
-  <div class="view active" id="view-plan">
+  <div class="view active" id="view-today">
+    <div class="today-strip fade-in d1">
+      <div id="todayDateLabel">&nbsp;</div>
+      <div>Race day in <b id="todayDaysLeft">–</b> days</div>
+    </div>
+
+    <div class="today-hero fade-in d2" id="todayHero">
+      <!-- filled by renderToday() -->
+    </div>
+
+    <div class="coach-panel fade-in d2" id="coachPanel">
+      <div class="coach-head">
+        <div class="coach-avatar">CJ</div>
+        <div>
+          <div class="who">Coach Jack</div>
+          <div class="sub">Quick actions — fixed responses, not AI</div>
+        </div>
+      </div>
+      <div class="chat-log" id="chatLog"></div>
+      <div class="chip-row" id="chatChips"></div>
+      <div class="holiday-form" id="holidayForm">
+        <div class="row">
+          <div><label>From</label><input type="date" id="holidayFrom" /></div>
+          <div><label>To</label><input type="date" id="holidayTo" /></div>
+          <button class="btn primary" onclick="submitHolidayMode()">Start holiday mode</button>
+          <button class="btn" onclick="toggleHolidayForm(false)">Cancel</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="view" id="view-plan">
     <div class="hero fade-in d2">
       <div>
         <div class="countdown-label">Race day in</div>
@@ -344,7 +483,7 @@
     <div class="section-label"><div class="idx">01</div><h2>The Block</h2><div class="sub">tap a week to jump there</div></div>
     <div class="track" id="track"></div>
 
-    <div class="section-label"><div class="idx">02</div><h2 id="weekHeading">This Week</h2><div class="sub">tap a session for the full breakdown</div></div>
+    <div class="section-label"><div class="idx">02</div><h2 id="weekHeading">This Week</h2><div class="sub">drag a session to another day</div></div>
     <div class="week-head">
       <div>
         <div class="week-eyebrow" id="weekEyebrow">&nbsp;</div>
@@ -356,13 +495,22 @@
       </div>
     </div>
     <div class="progress"><div id="weekProgress" style="width:0%"></div></div>
-    <div class="sessions" id="sessions"></div>
+    <div class="cal-hint">Drag a card onto another day to reschedule it. Tap a card for the full breakdown.</div>
+    <div class="cal-grid" id="calGrid"></div>
 
     <div class="section-label"><div class="idx">03</div><h2>Adjustments</h2><div class="sub">what changed, and why</div></div>
     <div class="adapt-log" id="adaptLog"></div>
   </div>
 
-  <div class="view" id="view-fitness">
+  <div class="view" id="view-stats">
+    <nav class="subnav fade-in d1">
+      <button class="active" data-subview="fitness">Fitness</button>
+      <button data-subview="zones">Pace Zones</button>
+      <button data-subview="predict">Race Predictor</button>
+      <button data-subview="strava">Strava</button>
+    </nav>
+
+  <div class="subview active" id="view-fitness">
     <div class="section-label"><div class="idx">04</div><h2>Fitness &amp; Recovery</h2><div class="sub">VO2 max + Whoop recovery</div></div>
     <div class="two-col">
       <div class="card">
@@ -394,7 +542,7 @@
     </div>
   </div>
 
-  <div class="view" id="view-zones">
+  <div class="subview" id="view-zones">
     <div class="section-label"><div class="idx">05</div><h2>Pace Zones</h2><div class="sub">derived from your latest VDOT</div></div>
     <div class="card">
       <p class="note">Known values from your plan: threshold 4:45–4:55/km, marathon pace 4:58/km (pending the 20 Sep decision gate). Zones below update from your latest VDOT once entered.</p>
@@ -402,12 +550,12 @@
     </div>
   </div>
 
-  <div class="view" id="view-predict">
+  <div class="subview" id="view-predict">
     <div class="section-label"><div class="idx">06</div><h2>Race Predictor</h2><div class="sub">from your latest VDOT</div></div>
     <div class="card"><table class="data-table"><thead><tr><th>Distance</th><th>Predicted time</th><th>Predicted pace / km</th></tr></thead><tbody id="predictBody"></tbody></table></div>
   </div>
 
-  <div class="view" id="view-strava">
+  <div class="subview" id="view-strava">
     <div class="section-label"><div class="idx">07</div><h2>Strava</h2><div class="sub">synced automatically every 3 hours</div></div>
     <div class="card">
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; flex-wrap:wrap; gap:10px;">
@@ -427,8 +575,9 @@
       <table class="data-table"><thead><tr><th>Date</th><th>Distance</th><th>Pace</th><th>HR</th><th>Note</th><th>Source</th></tr></thead><tbody id="stravaBody"></tbody></table>
     </div>
   </div>
+  </div><!-- /view-stats -->
 
-  <div class="view" id="view-plan-notes">
+  <div class="view" id="view-more">
     <div class="section-label"><div class="idx">08</div><h2>Plan Notes</h2><div class="sub">the rules, the gate, the fuel</div></div>
     <div class="two-col">
       <div class="card">
@@ -473,15 +622,35 @@
         </table>
       </div>
     </div>
-  </div>
 
-  <div class="view" id="view-history">
     <div class="section-label"><div class="idx">09</div><h2>Session History</h2><div class="sub">everything logged so far</div></div>
     <div class="card"><table class="data-table"><thead><tr><th>Week</th><th>Day</th><th>Date</th><th>Session</th><th>Status</th></tr></thead><tbody id="historyBody"></tbody></table></div>
+
+    <footer class="fade-in">Connected to your live backend — data persists across devices and sessions.</footer>
   </div>
 
-  <footer class="fade-in">Connected to your live backend — data persists across devices and sessions.</footer>
 </div>
+
+<!-- Bottom tab bar — the app's primary navigation. Fixed to the viewport so it
+     reads like a native app's tab bar rather than a page you scroll past. -->
+<nav class="bottomtabs" id="bottomTabs">
+  <button class="active" data-view="today" aria-label="Today">
+    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="8.5" stroke="currentColor" stroke-width="1.8"/><path d="M12 7.5V12l3 2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    <span>Today</span>
+  </button>
+  <button data-view="plan" aria-label="Plan">
+    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15" rx="2.5" stroke="currentColor" stroke-width="1.8"/><path d="M3.5 9.5h17M8 3v3.5M16 3v3.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+    <span>Plan</span>
+  </button>
+  <button data-view="stats" aria-label="Stats">
+    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4.5 20V13M12 20V6.5M19.5 20v-9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+    <span>Stats</span>
+  </button>
+  <button data-view="more" aria-label="More">
+    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="5" cy="12" r="1.6" fill="currentColor"/><circle cx="12" cy="12" r="1.6" fill="currentColor"/><circle cx="19" cy="12" r="1.6" fill="currentColor"/></svg>
+    <span>More</span>
+  </button>
+</nav>
 
 <div class="modal-backdrop" id="modalBackdrop">
   <div class="modal">
@@ -497,6 +666,23 @@
   </div>
 </div>
 
+<!-- Reschedule confirm sheet — shown only when a drag crosses a week/phase
+     boundary or drops hard work into a recovery week (the same checks
+     reschedule_session already makes for Claude). A plain in-week drag needs
+     no confirmation and applies immediately. -->
+<div class="sheet-backdrop" id="sheetBackdrop">
+  <div class="sheet">
+    <h3 id="sheetTitle">Worth checking</h3>
+    <ul id="sheetWarnings"></ul>
+    <div class="actions">
+      <button class="btn" onclick="closeConfirmSheet()">Cancel</button>
+      <button class="btn primary" id="sheetConfirmBtn">Move it anyway</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast-wrap"><div class="toast" id="toast"></div></div>
+
 <script>
 /* ============================================================
    API WIRING
@@ -511,6 +697,18 @@ async function apiPost(path, body){
   const res = await fetch(`${API_BASE}${path}`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
   if(!res.ok) throw new Error(`POST ${path} → HTTP ${res.status}`);
   return res.json();
+}
+// Like apiPost, but never throws on a non-2xx — the app-write endpoints use a
+// non-2xx status on purpose (409 = "needs confirmation", 400 = a PlanError)
+// and the JSON body is exactly what the caller needs to read either way.
+async function apiPostAny(path, body){
+  try{
+    const res = await fetch(`${API_BASE}${path}`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
+    const json = await res.json().catch(()=> null);
+    return { ok: res.ok, status: res.status, json };
+  } catch(err){
+    return { ok:false, status:0, json:null };
+  }
 }
 function setConnStatus(ok, text, detail){
   const el = document.getElementById('connStatus');
@@ -710,19 +908,56 @@ function applyServerPlan(rows){
 
 let state = { currentWeek: currentWeekIndex(), sessionLog: {}, adaptLog: [], vo2History: [], whoopRows: [], stravaRows: [] };
 
-document.querySelectorAll('nav.tabs button').forEach(btn=>{
+/* ============================================================
+   NAVIGATION — bottom tab bar (Today / Plan / Stats / More) is the app's
+   primary navigation. Stats keeps its own secondary row (subnav) to reach
+   Fitness / Zones / Predictor / Strava without giving each a tab of its own.
+   ============================================================ */
+document.querySelectorAll('nav.bottomtabs button').forEach(btn=>{
+  btn.addEventListener('click', ()=> switchView(btn.dataset.view));
+});
+function switchView(view){
+  document.querySelectorAll('nav.bottomtabs button').forEach(b=>b.classList.toggle('active', b.dataset.view === view));
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  document.getElementById('view-'+view).classList.add('active');
+  if(view === 'today') renderToday();
+  if(view === 'plan'){ renderTrack(); renderCalendar(); }
+  if(view === 'more') renderHistory();
+  if(view === 'stats'){
+    const active = document.querySelector('nav.subnav button.active');
+    renderSubview(active ? active.dataset.subview : 'fitness');
+  }
+}
+document.querySelectorAll('nav.subnav button').forEach(btn=>{
   btn.addEventListener('click', ()=>{
-    document.querySelectorAll('nav.tabs button').forEach(b=>b.classList.remove('active'));
-    document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+    document.querySelectorAll('nav.subnav button').forEach(b=>b.classList.remove('active'));
+    document.querySelectorAll('.subview').forEach(v=>v.classList.remove('active'));
     btn.classList.add('active');
-    document.getElementById('view-'+btn.dataset.view).classList.add('active');
-    if(btn.dataset.view==='zones') renderZones();
-    if(btn.dataset.view==='predict') renderPredictor();
-    if(btn.dataset.view==='history') renderHistory();
-    if(btn.dataset.view==='fitness') renderRecoveryOverlay();
-    if(btn.dataset.view==='strava') renderStrava();
+    document.getElementById('view-'+btn.dataset.subview).classList.add('active');
+    renderSubview(btn.dataset.subview);
   });
 });
+function renderSubview(name){
+  if(name === 'zones') renderZones();
+  if(name === 'predict') renderPredictor();
+  if(name === 'fitness') renderRecoveryOverlay();
+  if(name === 'strava') renderStrava();
+}
+
+// Every session across the whole block, flattened out of WEEKS with its real
+// current date and a stable key — the one list Today, the Plan calendar and
+// the modal all read from, so they can never disagree about where a session sits.
+function flattenAllSessions(){
+  const out = [];
+  for(let wk=1; wk<=TOTAL_WEEKS; wk++){
+    sessionsForWeek(wk).forEach(s=>{
+      const key = s.key || `${wk}-${s.day}`;
+      const dateStr = s.date || fmtDate(sessionDate(wk, s.day));
+      out.push({ ...s, wk, key, date: dateStr });
+    });
+  }
+  return out;
+}
 
 function renderTrack(){
   const el = document.getElementById('track'); el.innerHTML = '';
@@ -736,7 +971,7 @@ function renderTrack(){
     lane.className = `lane ${statusClass}${eventClass}`;
     lane.innerHTML = `<span class="wk">W${wk}</span><span class="phase">${w.phase}</span><span class="km">${w.km}${w.km!=='Race' ? 'k':''}</span>`;
     lane.title = w.headline ? w.headline : `Week ${wk} — ${w.phase}`;
-    lane.onclick = () => { state.currentWeek = wk; renderTrack(); renderSessions(); };
+    lane.onclick = () => { state.currentWeek = wk; renderTrack(); renderCalendar(); };
     el.appendChild(lane);
   }
 }
@@ -772,10 +1007,16 @@ function sessionStateFor(key, dateStr){
   return dateStr > today ? 'upcoming' : 'unlogged';
 }
 
-function renderSessions(){
+/* ============================================================
+   PLAN VIEW — the drag-and-drop weekly calendar. Cards are laid out by their
+   REAL current date (via flattenAllSessions), not by original slot, so a
+   session already moved shows up on the day it actually sits on now.
+   ============================================================ */
+function renderCalendar(){
   const wk = state.currentWeek;
   const w = WEEKS[wk-1];
   const start = weekStart(wk), end = addDays(start, 6);
+  const dates = [0,1,2,3,4,5,6].map(i => fmtDate(addDays(start, i)));
 
   document.getElementById('weekHeading').textContent = w.headline || 'This Week';
   document.getElementById('weekEyebrow').textContent = `Week ${wk} of ${TOTAL_WEEKS} · ${w.phase}`;
@@ -783,54 +1024,142 @@ function renderSessions(){
   document.getElementById('todayLabel').textContent = `Today is ${fmtLong(new Date())}`;
   document.getElementById('curWeekLabel').textContent = `Week ${wk} (${w.phase})${w.headline ? ' — '+w.headline : ''}`;
 
-  const el = document.getElementById('sessions'); el.innerHTML = '';
-  let loggedCount = 0;
+  const byDate = {}; dates.forEach(d => byDate[d] = []);
+  flattenAllSessions().forEach(s => { if(byDate[s.date]) byDate[s.date].push(s); });
 
-  w.sessions.forEach(s=>{
-    const key = s.key || `${wk}-${s.day}`;
-    const dateStr = s.date || fmtDate(sessionDate(wk, s.day));
-    const st = sessionStateFor(key, dateStr);
-    if(st === 'hit' || st === 'niggle' || st === 'miss') loggedCount++;
-    const logged = state.sessionLog[key];
-    const note = (logged && logged.notes) || s.notes;
-    const full = { ...s, date: dateStr };
+  const today = todayISO();
+  const grid = document.getElementById('calGrid'); grid.innerHTML = '';
+  let loggedCount = 0, totalCount = 0;
 
-    const row = document.createElement('div');
-    row.className = `session is-${st}`;
-    row.tabIndex = 0;
-    row.setAttribute('role', 'button');
-    row.setAttribute('aria-label', `${s.title}, ${fmtLong(dateStr)} — ${CHIP_LABEL[st]}`);
-    row.innerHTML = `
-      <div class="accent"></div>${st === 'today' ? '<div class="ring"></div>' : ''}
-      <div>
-        <div class="day">${s.day}</div>
-        <div class="sdate">${fmtUK(dateStr)}</div>
-      </div>
-      <div class="body">
-        <span class="type">${s.type}</span>
-        <h3>${s.title}</h3>
-        <div class="targets">${s.targets || s.detail || ''}</div>
-        ${s.movedFrom ? `<div class="moved">moved from ${fmtUK(s.movedFrom)}</div>` : ''}
-        ${note ? `<div class="snote">${note}</div>` : ''}
-      </div>
-      <div class="sstatus"><span class="chip ${st}">${CHIP_ICON[st]}${CHIP_LABEL[st]}</span></div>`;
-    row.onclick = ()=> openModal(key, full);
-    row.onkeydown = (e)=>{ if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); openModal(key, full); } };
-    el.appendChild(row);
+  dates.forEach((dateStr, i) => {
+    const day = document.createElement('div');
+    day.className = 'cal-day' + (dateStr === today ? ' is-today' : '');
+    day.dataset.date = dateStr;
+    day.innerHTML = `<div class="cal-daylabel">${DAY_NAMES[i]}</div><div class="cal-date">${fmtUK(dateStr).slice(0,5)}</div>`;
+
+    byDate[dateStr].forEach(s => {
+      totalCount++;
+      const st = sessionStateFor(s.key, s.date);
+      if(st === 'hit' || st === 'niggle' || st === 'miss') loggedCount++;
+      const card = document.createElement('div');
+      card.className = `cal-card is-${st}`;
+      card.dataset.date = s.date; card.dataset.type = s.type; card.dataset.key = s.key;
+      card._session = s; // used by the drag handlers and tap-to-open, not serialised
+      card.tabIndex = 0;
+      card.setAttribute('role', 'button');
+      card.setAttribute('aria-label', `${s.title}, ${fmtLong(s.date)} — ${CHIP_LABEL[st]}`);
+      card.innerHTML = `<div class="type">${s.type}</div><div class="ttl">${s.title}</div>${s.targets ? `<div class="tg">${s.targets}</div>` : ''}<div class="stbar"></div>`;
+      card.onkeydown = (e) => { if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); openModal(s.key, s); } };
+      day.appendChild(card);
+    });
+    grid.appendChild(day);
   });
 
-  const total = w.sessions.length || 1;
-  document.getElementById('weekLogged').textContent = `${loggedCount} of ${w.sessions.length} sessions logged`;
-  document.getElementById('weekProgress').style.width = `${Math.round((loggedCount/total)*100)}%`;
+  document.getElementById('weekLogged').textContent = `${loggedCount} of ${totalCount} sessions logged`;
+  document.getElementById('weekProgress').style.width = `${totalCount ? Math.round((loggedCount/totalCount)*100) : 0}%`;
 }
+
+/* ---- drag-and-drop: one pointer-event path for mouse AND touch, so the
+   same code drives a laptop drag and a phone drag. A press that never moves
+   past the threshold is treated as a tap and opens the session modal instead. */
+const DRAG_THRESHOLD = 8;
+let dragCtx = null;
+
+function initCalendarDrag(){
+  document.getElementById('calGrid').addEventListener('pointerdown', (e) => {
+    if(dragCtx) return;
+    const card = e.target.closest('.cal-card');
+    if(!card || (e.pointerType === 'mouse' && e.button !== 0)) return;
+    dragCtx = { pointerId: e.pointerId, card, session: card._session, startX: e.clientX, startY: e.clientY, active: false, ghost: null };
+    card.setPointerCapture(e.pointerId);
+    document.addEventListener('pointermove', onCalPointerMove);
+    document.addEventListener('pointerup', onCalPointerUp, { once: true });
+    document.addEventListener('pointercancel', onCalPointerUp, { once: true });
+  });
+}
+function onCalPointerMove(e){
+  if(!dragCtx || e.pointerId !== dragCtx.pointerId) return;
+  const dx = e.clientX - dragCtx.startX, dy = e.clientY - dragCtx.startY;
+  if(!dragCtx.active){
+    if(Math.hypot(dx, dy) < DRAG_THRESHOLD) return;
+    dragCtx.active = true;
+    dragCtx.card.classList.add('dragging');
+    const rect = dragCtx.card.getBoundingClientRect();
+    const status = sessionStateFor(dragCtx.session.key, dragCtx.session.date);
+    const ghost = dragCtx.card.cloneNode(true);
+    ghost.className = `cal-ghost cal-card is-${status}`;
+    ghost.style.width = rect.width + 'px';
+    document.body.appendChild(ghost);
+    dragCtx.ghost = ghost;
+  }
+  if(dragCtx.ghost){ dragCtx.ghost.style.left = e.clientX + 'px'; dragCtx.ghost.style.top = e.clientY + 'px'; }
+  document.querySelectorAll('.cal-day').forEach(d => d.classList.remove('dragover'));
+  const under = document.elementFromPoint(e.clientX, e.clientY);
+  const dayEl = under && under.closest('.cal-day');
+  if(dayEl) dayEl.classList.add('dragover');
+}
+async function onCalPointerUp(e){
+  document.removeEventListener('pointermove', onCalPointerMove);
+  if(!dragCtx || e.pointerId !== dragCtx.pointerId){ dragCtx = null; return; }
+  const { card, session, active, ghost } = dragCtx;
+  card.classList.remove('dragging');
+  if(ghost) ghost.remove();
+  document.querySelectorAll('.cal-day').forEach(d => d.classList.remove('dragover'));
+  dragCtx = null;
+
+  if(!active){ openModal(session.key, session); return; } // a tap, not a drag
+
+  const under = document.elementFromPoint(e.clientX, e.clientY);
+  const dayEl = under && under.closest('.cal-day');
+  if(!dayEl) return;
+  const toDate = dayEl.dataset.date;
+  if(toDate === session.date) return;
+  await attemptReschedule(session.date, session.type, toDate);
+}
+
+async function attemptReschedule(fromDate, fromType, toDate){
+  const { json } = await apiPostAny('/api/app/reschedule-session', { from_date: fromDate, from_type: fromType, to_date: toDate });
+  if(!json){ showToast('Could not move it — check the connection.'); return; }
+  if(json.needs_confirmation){
+    openConfirmSheet(json.warnings, async () => {
+      closeConfirmSheet();
+      const confirmed = await apiPostAny('/api/app/reschedule-session', { from_date: fromDate, from_type: fromType, to_date: toDate, confirm: true });
+      if(confirmed.json && confirmed.json.ok){ showToast(`Moved to ${fmtLong(toDate)}.`); await refreshPlanAndRender(); }
+      else showToast((confirmed.json && confirmed.json.error) || 'Could not move it.');
+    });
+    return;
+  }
+  if(json.ok){ showToast(`Moved to ${fmtLong(toDate)}.`); await refreshPlanAndRender(); }
+  else showToast(json.error || 'Could not move it.');
+}
+function openConfirmSheet(warnings, onConfirm){
+  document.getElementById('sheetWarnings').innerHTML = (warnings || []).map(w => `<li>${w}</li>`).join('');
+  document.getElementById('sheetConfirmBtn').onclick = onConfirm;
+  document.getElementById('sheetBackdrop').classList.add('open');
+}
+function closeConfirmSheet(){ document.getElementById('sheetBackdrop').classList.remove('open'); }
+
+let toastTimer = null;
+function showToast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 3200);
+}
+
+/* ---- session detail modal — reused by Today, the Plan calendar, and (indirectly)
+   nothing else. Its Hit/Niggle/Missed buttons go through the same quick-action
+   engine as the Coach Jack chips, just reported with a toast instead of a chat reply. */
 function openModal(key, s){
   document.getElementById('modalTitle').textContent = s.title;
-  const modalDate = s.date || fmtDate(sessionDate(state.currentWeek, s.day));
-  document.getElementById('modalMeta').textContent = `${fmtLong(modalDate)}${s.targets ? ' · '+s.targets : ''}`;
-  document.getElementById('modalBackdrop').dataset.activeKey = key;
-  // Show which status is already set, so the modal reflects the row you tapped.
+  document.getElementById('modalMeta').textContent = `${fmtLong(s.date)}${s.targets ? ' · '+s.targets : ''}`;
+  const backdrop = document.getElementById('modalBackdrop');
+  backdrop.dataset.activeKey = key;
+  backdrop.dataset.activeDate = s.date;
+  backdrop.dataset.activeType = s.type;
+  // Show which status is already set, so the modal reflects the card you tapped.
   const current = (state.sessionLog[key] || {}).status;
-  document.querySelectorAll('#modalBackdrop .btn').forEach(b=>{
+  document.querySelectorAll('#modalBackdrop .btn').forEach(b => {
     b.classList.toggle('done', !!current && b.classList.contains(current));
   });
   let html = '';
@@ -844,19 +1173,163 @@ function openModal(key, s){
   document.getElementById('modalBackdrop').classList.add('open');
 }
 function closeModal(){ document.getElementById('modalBackdrop').classList.remove('open'); }
-function logSessionFromModal(status){ const key = document.getElementById('modalBackdrop').dataset.activeKey; if(key){ logSession(key, status); closeModal(); } }
-
-async function logSession(key, status){
-  const [wk, day] = key.split('-');
-  state.sessionLog[key] = {status, at:new Date().toISOString()};
-  renderTrack(); renderSessions();
-  try{
-    const result = await apiPost('/api/sessions', { week: parseInt(wk), day, status });
-    if(result.adaptation) pushAdaptLocal(result.adaptation);
-    renderAdaptLog();
-  } catch(err){ console.error('Failed to save session', err); }
+function logSessionFromModal(status){
+  const backdrop = document.getElementById('modalBackdrop');
+  const date = backdrop.dataset.activeDate, session_type = backdrop.dataset.activeType;
+  closeModal();
+  if(date) runQuickAction(status, { date, session_type });
 }
-function pushAdaptLocal(text){ state.adaptLog.unshift({message:text, created_at:new Date().toISOString()}); }
+
+/* ============================================================
+   COACH JACK QUICK ACTIONS — every preset is a fixed rule on the backend
+   (plan-service.js applyQuickAction); this is just the wiring that calls it
+   and shows the reply, either as a toast (modal path) or as chat bubbles
+   (Today view). No text is generated here or on the server — see COACH in
+   plan-service.js for the full fixed-copy table.
+   ============================================================ */
+async function postQuickAction(preset, args){
+  return apiPostAny('/api/app/quick-action', { preset, ...args });
+}
+async function runQuickAction(preset, args){
+  const { ok, json } = await postQuickAction(preset, args);
+  showToast(ok && json ? ((json.coach && json.coach[0]) || 'Saved.') : ((json && json.error) || 'Could not save — check the connection.'));
+  await refreshPlanAndRender();
+}
+async function sendQuickAction(preset, args, userLabel){
+  if(userLabel) pushChatBubble('user', userLabel);
+  setChipsDisabled(true);
+  const { ok, json } = await postQuickAction(preset, args);
+  setChipsDisabled(false);
+  if(!ok || !json){ pushChatBubble('coach', (json && json.error) || "Couldn't reach the backend — try again in a moment."); return; }
+  (json.coach || []).forEach(line => pushChatBubble('coach', line));
+  if(json.follow_up && json.follow_up.kind === 'reschedule') pushFollowUpChips(json.follow_up);
+  await refreshPlanAndRender();
+}
+function pushChatBubble(role, text){
+  const log = document.getElementById('chatLog');
+  const b = document.createElement('div');
+  b.className = `bubble ${role}`;
+  b.textContent = text;
+  log.appendChild(b);
+  log.scrollTop = log.scrollHeight;
+}
+function pushFollowUpChips(followUp){
+  const log = document.getElementById('chatLog');
+  const row = document.createElement('div');
+  row.className = 'chip-row';
+  const yes = document.createElement('button'); yes.className = 'chip-btn special'; yes.textContent = followUp.label;
+  const no = document.createElement('button'); no.className = 'chip-btn'; no.textContent = followUp.decline_label;
+  row.append(yes, no);
+  log.appendChild(row);
+  log.scrollTop = log.scrollHeight;
+
+  const resolve = async (accepted) => {
+    yes.disabled = true; no.disabled = true;
+    row.remove();
+    if(!accepted){ pushChatBubble('coach', followUp.declined_reply); return; }
+    const { ok, json } = await apiPostAny('/api/app/reschedule-session', {
+      from_date: followUp.from_date, from_type: followUp.from_type,
+      to_date: followUp.to_date, confirm: true, reason: 'missed long run',
+    });
+    if(ok && json && json.ok){ pushChatBubble('coach', `Moved to ${fmtLong(followUp.to_date)}, distance kept the same.`); await refreshPlanAndRender(); }
+    else pushChatBubble('coach', "That didn't go through — give it another try from the Plan tab.");
+  };
+  yes.onclick = () => resolve(true);
+  no.onclick = () => resolve(false);
+}
+function setChipsDisabled(disabled){
+  document.querySelectorAll('#chatChips .chip-btn, #chatLog .chip-row .chip-btn').forEach(b => b.disabled = disabled);
+}
+function toggleHolidayForm(open){
+  const form = document.getElementById('holidayForm');
+  form.classList.toggle('open', open);
+  if(open){
+    const from = document.getElementById('holidayFrom'), to = document.getElementById('holidayTo');
+    if(!from.value) from.value = todayISO();
+    if(!to.value) to.value = fmtDate(addDays(new Date(), 6));
+  }
+}
+async function submitHolidayMode(){
+  const from = document.getElementById('holidayFrom').value;
+  const to = document.getElementById('holidayTo').value;
+  if(!from || !to){ showToast('Pick both dates first.'); return; }
+  toggleHolidayForm(false);
+  await sendQuickAction('holiday', { from_date: from, to_date: to }, `Holiday mode, ${fmtUK(from)}–${fmtUK(to)}`);
+}
+
+/* ============================================================
+   TODAY VIEW — one session, front and centre. Picks today's session if
+   there is one, otherwise the next one coming up; nothing to log yet shows
+   as a quiet "block complete" state rather than an error.
+   ============================================================ */
+function nextFocusSession(){
+  const all = flattenAllSessions().sort((a, b) => a.date < b.date ? -1 : a.date > b.date ? 1 : 0);
+  const today = todayISO();
+  const todays = all.filter(s => s.date === today);
+  if(todays.length) return todays[0];
+  return all.find(s => s.date > today) || null;
+}
+function renderToday(){
+  document.getElementById('todayDateLabel').innerHTML = `<b>${fmtLong(new Date())}</b>`;
+  document.getElementById('todayDaysLeft').textContent = Math.max(0, Math.ceil((RACE_DATE - Date.now())/86400000));
+
+  const focus = nextFocusSession();
+  const hero = document.getElementById('todayHero');
+  if(!focus){
+    hero.innerHTML = `<div class="today-empty">Block complete — nothing left scheduled. Well done getting here.</div>`;
+    renderChatChips(null);
+    return;
+  }
+  const isToday = focus.date === todayISO();
+  const st = sessionStateFor(focus.key, focus.date);
+  hero.innerHTML = `
+    <div class="today-eyebrow">${isToday ? 'Today' : 'Next up — '+fmtLong(focus.date)}</div>
+    <span class="type">${focus.type}</span>
+    <h2>${focus.title}</h2>
+    <div class="meta">Week ${focus.wk} of ${TOTAL_WEEKS} &middot; ${fmtLong(focus.date)}</div>
+    ${focus.targets ? `<div class="targets">${focus.targets}</div>` : ''}
+    ${focus.movedFrom ? `<div class="moved">moved from ${fmtUK(focus.movedFrom)}</div>` : ''}
+    ${isToday && st !== 'today' ? `<div style="margin-top:14px;"><span class="chip ${st}">${CHIP_ICON[st]}${CHIP_LABEL[st]}</span></div>` : ''}
+    ${focus.exercises ? `<ul class="exlist">${focus.exercises.map(e=>`<li>${e}</li>`).join('')}</ul>` : ''}
+    ${focus.detail ? `<div class="detail">${focus.detail}</div>` : ''}
+  `;
+  renderChatChips(focus);
+}
+function renderChatChips(focus){
+  const wrap = document.getElementById('chatChips'); wrap.innerHTML = '';
+  const addChip = (cls, label, handler) => {
+    const b = document.createElement('button');
+    b.className = `chip-btn ${cls}`; b.textContent = label; b.onclick = handler;
+    wrap.appendChild(b);
+  };
+  const isToday = focus && focus.date === todayISO();
+  if(focus && isToday && focus.type !== 'rest'){
+    addChip('hit', 'Hit it', () => sendQuickAction('hit', { date: focus.date, session_type: focus.type }, 'Hit it'));
+    addChip('niggle', 'Something niggled', () => sendQuickAction('niggle', { date: focus.date, session_type: focus.type }, 'Something niggled'));
+    addChip('miss', 'Missed it', () => sendQuickAction('miss', { date: focus.date, session_type: focus.type }, 'Missed it'));
+  }
+  addChip('special', 'Feeling ill', () => sendQuickAction('ill', { date: todayISO() }, 'Feeling ill'));
+  addChip('special', 'Holiday mode', () => toggleHolidayForm(true));
+  if(focus) addChip('special', 'Hot weather', () => sendQuickAction('heat', { date: focus.date, session_type: focus.type }, 'Hot weather'));
+}
+
+// Re-pulls the plan, session log and adapt log from the backend after any
+// write, and redraws everything downstream of them. Simpler and safer than
+// hand-patching local state after a reschedule that might have crossed a
+// week boundary, changed a status, or rewritten a session's copy.
+async function refreshPlanAndRender(){
+  try{
+    const [sessions, adaptLog, plan] = await Promise.all([
+      apiGet('/api/sessions'), apiGet('/api/adapt-log'), apiGet('/api/plan').catch(() => null),
+    ]);
+    state.sessionLog = {};
+    sessions.forEach(s => { state.sessionLog[`${s.week}-${s.day}`] = { status: s.status, notes: s.notes, at: s.logged_at }; });
+    applyServerPlan(plan);
+    state.adaptLog = adaptLog;
+    renderHero(); renderTrack(); renderCalendar(); renderToday(); renderAdaptLog();
+    if(document.getElementById('view-more').classList.contains('active')) renderHistory();
+  } catch(err){ console.error('Refresh after write failed', err); }
+}
 function renderAdaptLog(){
   const el = document.getElementById('adaptLog');
   if(state.adaptLog.length === 0){ el.innerHTML = `<div class="empty">No adjustments yet — log a missed or niggled session above and the plan reshuffles here.</div>`; return; }
@@ -991,10 +1464,11 @@ function renderStrava(){
 
 function renderHistory(){
   const tbody = document.getElementById('historyBody');
+  const byKey = {}; flattenAllSessions().forEach(s => { byKey[s.key] = s; });
   const entries = Object.entries(state.sessionLog).sort((a,b)=> new Date(b[1].at)-new Date(a[1].at));
   if(entries.length===0){ tbody.innerHTML = `<tr><td colspan="5" style="font-family:'Manrope'; color:var(--muted);">Nothing logged yet.</td></tr>`; return; }
-  tbody.innerHTML = entries.map(([key,val])=>{ const [wk,day] = key.split('-'); const sess = sessionsForWeek(parseInt(wk)).find(s=>s.day===day);
-    return `<tr><td>W${wk}</td><td>${day}</td><td>${fmtUK(sessionDate(parseInt(wk),day))}</td><td style="font-family:'Manrope';">${sess ? sess.title : '–'}</td><td><span class="status-pill ${val.status}">${val.status}</span></td></tr>`; }).join('');
+  tbody.innerHTML = entries.map(([key,val])=>{ const [wk,day] = key.split('-'); const sess = byKey[key];
+    return `<tr><td>W${wk}</td><td>${day}</td><td>${sess ? fmtUK(sess.date) : '–'}</td><td style="font-family:'Manrope';">${sess ? sess.title : '–'}</td><td><span class="status-pill ${val.status}">${val.status}</span></td></tr>`; }).join('');
 }
 
 let miniLoadChartInstance = null;
@@ -1012,7 +1486,7 @@ function renderHero(){
   miniLoadChartInstance = new Chart(ctx, { type:'bar', data:{ labels, datasets:[{ data: totals, backgroundColor: labels.map((_,i)=> i+1===state.currentWeek ? '#6f9ff2' : 'rgba(255,255,255,0.12)'), borderRadius:3 }]}, options:{ plugins:{legend:{display:false}}, scales:{ x:{display:false}, y:{display:false} } } });
 }
 
-function renderStaticPlan(){ renderHero(); renderTrack(); renderSessions(); renderAdaptLog(); }
+function renderStaticPlan(){ renderHero(); renderTrack(); renderCalendar(); renderToday(); renderAdaptLog(); }
 
 async function loadEverything(retryCount = 0, manualRetry = false){
   if(manualRetry) setConnStatus(true, 'retrying…', '');
@@ -1030,7 +1504,7 @@ async function loadEverything(retryCount = 0, manualRetry = false){
     state.whoopRows = whoop.map(w => ({ date: w.entry_date, recovery: w.recovery_pct, rhr: w.resting_hr, hrv: w.hrv }));
     state.stravaRows = strava;
     setConnStatus(true, 'connected', '');
-    renderHero(); renderTrack(); renderSessions(); renderAdaptLog(); renderVo2(); renderWhoop(); renderStrava();
+    renderHero(); renderTrack(); renderCalendar(); renderToday(); renderAdaptLog(); renderVo2(); renderWhoop(); renderStrava();
   } catch(err){
     console.error('Failed to load from backend', err);
     const waking = retryCount < 3;
@@ -1043,6 +1517,8 @@ function bootApp(){
   document.getElementById('vo2Date').value = fmtDate(new Date());
   document.getElementById('stravaDate').value = fmtDate(new Date());
   document.getElementById('modalBackdrop').addEventListener('click', (e)=>{ if(e.target.id==='modalBackdrop') closeModal(); });
+  document.getElementById('sheetBackdrop').addEventListener('click', (e)=>{ if(e.target.id==='sheetBackdrop') closeConfirmSheet(); });
+  initCalendarDrag();
   setConnStatus(true, 'connecting…', '');
   renderStaticPlan();
   loadEverything();
